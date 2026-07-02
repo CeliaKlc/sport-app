@@ -5,11 +5,26 @@ const Stats = {
 
   render() {
     const seances = Store.seances().slice().sort((a, b) => b.debut - a.debut);
+    this.renderBackupBanner();
     this.renderWeekCards(seances);
     this.renderWeeksChart(seances);
     this.renderMuscles(seances);
     this.renderExoProgress(seances);
     this.renderHistory(seances);
+  },
+
+  renderBackupBanner() {
+    const banner = $("#backup-banner");
+    const total = Store.data.seances.length;
+    const last = Cloud.lastBackup();
+    const unMois = 30 * 24 * 3600 * 1000;
+    // rappel : au moins 3 séances jamais sauvegardées, ou dernière sauvegarde > 1 mois
+    const due = (total >= 3 && !last) || (total > 0 && last && Date.now() - last > unMois);
+    banner.classList.toggle("hidden", !due);
+    if (!due) return;
+    banner.innerHTML = `<span>💾 Pense à sauvegarder tes données&nbsp;!</span>
+      <button class="btn btn-small btn-accent">Sauvegarder</button>`;
+    banner.querySelector("button").onclick = () => UI.show("profil");
   },
 
   renderWeekCards(seances) {

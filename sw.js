@@ -1,5 +1,5 @@
 /* Service worker : met l'app en cache pour qu'elle fonctionne sans réseau à la salle. */
-const CACHE = "sportapp-v3";
+const CACHE = "sportapp-v4";
 const ASSETS = [
   ".",
   "index.html",
@@ -7,6 +7,7 @@ const ASSETS = [
   "js/store.js",
   "js/ui.js",
   "js/lock.js",
+  "js/cloud.js",
   "js/chrono.js",
   "js/stats.js",
   "js/planning.js",
@@ -31,6 +32,7 @@ self.addEventListener("activate", e => {
 
 self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
+  if (!e.request.url.startsWith(self.location.origin)) return; // ne pas intercepter GitHub & co
   e.respondWith(
     caches.match(e.request, { ignoreSearch: true }).then(hit =>
       hit ||

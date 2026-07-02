@@ -7,6 +7,48 @@ const Profil = {
     $("#set-met").onchange = () => this.saveSettings();
     $("#btn-export").onclick = () => this.exportData();
     $("#input-import").onchange = e => this.importData(e);
+    $("#set-ghtoken").onchange = () => {
+      Cloud.setToken($("#set-ghtoken").value);
+      this.renderCloudStatus();
+    };
+    $("#btn-cloud-save").onclick = () => this.cloudSave();
+    $("#btn-cloud-restore").onclick = () => this.cloudRestore();
+  },
+
+  async cloudSave() {
+    if (!Cloud.token()) { alert("Colle d'abord ta clé d'accès GitHub dans le champ juste au-dessus."); return; }
+    const b = $("#btn-cloud-save");
+    b.disabled = true; b.textContent = "☁️ Sauvegarde en cours…";
+    try {
+      await Cloud.save();
+      this.renderCloudStatus();
+      alert("Sauvegarde en ligne réussie ✅");
+    } catch (err) {
+      alert("Échec de la sauvegarde : " + err.message);
+    }
+    b.disabled = false; b.textContent = "☁️  Sauvegarder en ligne";
+  },
+
+  async cloudRestore() {
+    if (!Cloud.token()) { alert("Colle d'abord ta clé d'accès GitHub dans le champ juste au-dessus."); return; }
+    if (!confirm("Remplacer les données de cet appareil par la sauvegarde en ligne ?")) return;
+    const b = $("#btn-cloud-restore");
+    b.disabled = true; b.textContent = "⬇ Restauration…";
+    try {
+      await Cloud.restore();
+      refreshAll();
+      alert("Données restaurées ✅");
+    } catch (err) {
+      alert("Échec de la restauration : " + err.message);
+    }
+    b.disabled = false; b.textContent = "⬇  Restaurer la sauvegarde";
+  },
+
+  renderCloudStatus() {
+    const last = Cloud.lastBackup();
+    $("#cloud-status").textContent = last
+      ? "Dernière sauvegarde en ligne : " + fmtDateFull(dateToISO(new Date(last)))
+      : (Cloud.token() ? "Clé enregistrée sur cet appareil — aucune sauvegarde envoyée pour l'instant." : "");
   },
 
   render() {
@@ -22,6 +64,8 @@ const Profil = {
     $("#set-poids").value = p.poids;
     $("#set-seuil").value = p.seuilPause / 60;
     $("#set-met").value = p.met;
+    $("#set-ghtoken").value = Cloud.token();
+    this.renderCloudStatus();
   },
 
   saveSettings() {
@@ -42,6 +86,8 @@ const Profil = {
     a.download = "sport-app-donnees-" + todayISO() + ".json";
     a.click();
     URL.revokeObjectURL(a.href);
+    Cloud.markBackup();
+    this.renderCloudStatus();
   },
 
   importData(e) {

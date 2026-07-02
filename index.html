@@ -47,6 +47,7 @@
 
   <!-- ===== STATS ===== -->
   <section id="view-stats" class="view">
+    <div id="backup-banner" class="banner hidden"></div>
     <h2 class="section-title">Cette semaine</h2>
     <div class="cards-grid" id="stats-week-cards"></div>
 
@@ -153,14 +154,27 @@
       Calories = MET × poids × heures de temps actif.</p>
     </div>
 
-    <h2 class="section-title">Mes données</h2>
+    <h2 class="section-title">Sauvegarde en ligne (GitHub)</h2>
+    <div class="card settings">
+      <label>Clé d'accès GitHub (à coller une fois par appareil)
+        <input id="set-ghtoken" class="input" type="password" autocomplete="off" placeholder="ghp_…">
+      </label>
+      <button id="btn-cloud-save" class="btn btn-accent">☁️&nbsp; Sauvegarder en ligne</button>
+      <button id="btn-cloud-restore" class="btn btn-outline">⬇&nbsp; Restaurer la sauvegarde</button>
+      <p id="cloud-status" class="hint"></p>
+      <p class="hint">La sauvegarde part dans un «&nbsp;gist&nbsp;» <strong>privé</strong> de ton compte GitHub —
+      invisible du public, gratuit. Pour créer ta clé&nbsp;: github.com → Settings → Developer settings →
+      Personal access tokens (classic) → Generate new token, coche <strong>uniquement «&nbsp;gist&nbsp;»</strong>.</p>
+    </div>
+
+    <h2 class="section-title">Sauvegarde manuelle</h2>
     <div class="card settings">
       <button id="btn-export" class="btn btn-outline">⬇&nbsp; Exporter mes données (JSON)</button>
       <label class="btn btn-outline file-btn">⬆&nbsp; Importer des données
         <input id="input-import" type="file" accept=".json,application/json" hidden>
       </label>
-      <p class="hint">Tes données sont stockées uniquement sur cet appareil, rien n'est envoyé sur internet.
-      Pense à exporter de temps en temps pour avoir une sauvegarde.</p>
+      <p class="hint">Tes données restent sur cet appareil. L'export télécharge un fichier
+      que tu peux réimporter sur n'importe quel appareil.</p>
     </div>
   </section>
 
@@ -178,6 +192,7 @@
 <script src="js/store.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/lock.js"></script>
+<script src="js/cloud.js"></script>
 <script src="js/chrono.js"></script>
 <script src="js/stats.js"></script>
 <script src="js/planning.js"></script>
