@@ -12,6 +12,19 @@
 </head>
 <body>
 
+<!-- Écran de verrouillage (code d'accès) -->
+<div id="lock-screen" class="lock-screen">
+  <div id="lock-box" class="lock-box">
+    <span class="lock-emoji">🔒</span>
+    <h1>Sport App</h1>
+    <p class="lock-sub">Entre le code d'accès</p>
+    <input id="lock-input" class="input lock-input" type="password" inputmode="numeric"
+      autocomplete="off" placeholder="••••••">
+    <button id="lock-btn" class="btn btn-accent btn-big">Déverrouiller</button>
+    <p id="lock-error" class="lock-error hidden">Code incorrect, réessaie.</p>
+  </div>
+</div>
+
 <!-- Écran de choix du profil -->
 <div id="profile-select" class="profile-select hidden">
   <h1>Qui s'entraîne&nbsp;?</h1>
@@ -164,6 +177,7 @@
 
 <script src="js/store.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/lock.js"></script>
 <script src="js/chrono.js"></script>
 <script src="js/stats.js"></script>
 <script src="js/planning.js"></script>

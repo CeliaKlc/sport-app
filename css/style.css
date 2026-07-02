@@ -56,6 +56,24 @@ main{padding:16px;max-width:560px;margin:0 auto}
 .input{width:100%;background:var(--card2);border:1px solid #2a3040;border-radius:10px;color:var(--text);padding:11px 12px;font-size:16px}
 select.input{appearance:none}
 
+/* ===== Écran de verrouillage ===== */
+.lock-screen{
+  position:fixed;inset:0;z-index:200;background:var(--bg);
+  display:flex;justify-content:center;align-items:center;padding:24px;
+}
+.lock-box{width:100%;max-width:340px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
+.lock-emoji{font-size:52px}
+.lock-sub{color:var(--muted)}
+.lock-input{text-align:center;font-size:24px;letter-spacing:.35em;padding:14px}
+.lock-box .btn{width:100%}
+.lock-error{color:var(--red);font-size:14px;font-weight:600}
+.shake{animation:shake .4s}
+@keyframes shake{
+  0%,100%{transform:translateX(0)}
+  20%,60%{transform:translateX(-8px)}
+  40%,80%{transform:translateX(8px)}
+}
+
 /* ===== Choix du profil ===== */
 .profile-select{
   position:fixed;inset:0;z-index:100;background:var(--bg);
