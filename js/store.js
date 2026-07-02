@@ -1,26 +1,35 @@
 /* ===== Données : constantes + stockage localStorage ===== */
 
-const MUSCLES = ["Jambes", "Dos", "Pecs", "Épaules", "Bras", "Abdos", "Full body", "Cardio"];
+/* Split PPL + Upper/Lower :
+   Push = pecs, épaules, triceps · Pull = dos, biceps · Legs/Lower = jambes · Upper = haut du corps */
+const MUSCLES = ["Push", "Pull", "Legs", "Upper", "Lower", "Cardio"];
 const PLAN_TAGS = MUSCLES.concat(["Repos"]);
 
 const MUSCLE_COLORS = {
-  "Jambes": "#f97316",
-  "Dos": "#22c55e",
-  "Pecs": "#ef4444",
-  "Épaules": "#eab308",
-  "Bras": "#a855f7",
-  "Abdos": "#14b8a6",
-  "Full body": "#38bdf8",
+  "Push": "#ef4444",
+  "Pull": "#22c55e",
+  "Legs": "#f97316",
+  "Upper": "#38bdf8",
+  "Lower": "#a855f7",
   "Cardio": "#ec4899",
   "Repos": "#64748b"
 };
 
 const EXOS = {
-  "Jambes": ["Squat", "Presse à cuisses", "Fentes", "Leg extension", "Leg curl", "Hip thrust", "Mollets debout"],
-  "Dos": ["Tirage vertical", "Tirage horizontal", "Rowing barre", "Rowing haltère", "Soulevé de terre", "Pull-over"],
-  "Pecs": ["Développé couché", "Développé incliné", "Écartés (pec fly)", "Dips", "Pompes"],
-  "Épaules": ["Développé militaire", "Élévations latérales", "Élévations frontales", "Oiseau (arrière d'épaule)"],
-  "Bras": ["Curl biceps", "Curl marteau", "Extension triceps poulie", "Barre au front"],
+  "Push (pecs · épaules · triceps)": [
+    "Développé couché", "Développé incliné", "Écartés (pec fly)", "Dips", "Pompes",
+    "Développé militaire", "Élévations latérales", "Élévations frontales",
+    "Extension triceps poulie", "Barre au front"
+  ],
+  "Pull (dos · biceps)": [
+    "Tirage vertical", "Tirage horizontal", "Rowing barre", "Rowing haltère",
+    "Soulevé de terre", "Pull-over", "Oiseau (arrière d'épaule)",
+    "Curl biceps", "Curl marteau"
+  ],
+  "Legs / Lower (jambes)": [
+    "Squat", "Presse à cuisses", "Fentes", "Leg extension", "Leg curl",
+    "Hip thrust", "Soulevé de terre roumain", "Mollets debout"
+  ],
   "Abdos": ["Crunch", "Gainage", "Relevés de jambes"],
   "Cardio": ["Tapis de course", "Vélo", "Rameur", "Elliptique", "Escalier"]
 };
