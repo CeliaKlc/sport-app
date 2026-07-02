@@ -18,6 +18,7 @@ const Chrono = {
     $("#btn-add-serie").onclick = () => this.addSerie();
     $("#exo-select").onchange = () => {
       $("#exo-custom").classList.toggle("hidden", $("#exo-select").value !== "__autre");
+      this.updateHint(true);
     };
     // ré-acquiert le wake lock quand on revient sur l'app
     document.addEventListener("visibilitychange", () => {
@@ -97,6 +98,7 @@ const Chrono = {
     $("#chrono-idle").classList.add("hidden");
     $("#chrono-run").classList.remove("hidden");
     this.fillExoSelect();
+    this.updateHint(false);
     this.renderLog();
     this.updateButtons();
     $("#ch-seuil").textContent = fmtChrono(this.seuilMs());
@@ -201,6 +203,37 @@ const Chrono = {
     });
   },
 
+  /* ---- assistant de progression ---- */
+  lastPerf(exo) {
+    const anciennes = Store.data.seances
+      .filter(s => s.profil === this.st.profil && (s.exercices || []).some(e => e.nom === exo))
+      .sort((a, b) => b.debut - a.debut);
+    if (!anciennes.length) return null;
+    return { date: anciennes[0].date, series: anciennes[0].exercices.find(e => e.nom === exo).series };
+  },
+
+  updateHint(prefill) {
+    const hint = $("#exo-hint");
+    const exo = $("#exo-select").value;
+    if (exo === "__autre") { hint.classList.add("hidden"); return; }
+    const last = this.lastPerf(exo);
+    if (!last || !last.series.length) { hint.classList.add("hidden"); return; }
+    // meilleure série de la dernière fois : charge max, puis reps max
+    const best = last.series.reduce((a, b) =>
+      ((b.charge || 0) > (a.charge || 0) ||
+       ((b.charge || 0) === (a.charge || 0) && (b.reps || 0) > (a.reps || 0))) ? b : a);
+    const fmtS = x => [x.charge ? x.charge + " kg" : null, x.reps ? "× " + x.reps : null].filter(Boolean).join(" ") || "—";
+    // surcharge progressive : à 10 reps on monte la charge, sinon on ajoute une rep
+    let sugg = null;
+    if (!best.charge) { if (best.reps) sugg = "essaie × " + (best.reps + 1); }
+    else if ((best.reps || 0) >= 10) sugg = "essaie " + (best.charge + 2.5) + " kg × 8";
+    else sugg = "essaie " + best.charge + " kg × " + ((best.reps || 0) + 1);
+    hint.innerHTML = `Dernière fois (${esc(fmtDateFR(last.date))}) : ${last.series.map(fmtS).map(esc).join(" · ")}` +
+      (sugg ? `<br>💡 <strong>${esc(sugg)}</strong>` : "");
+    hint.classList.remove("hidden");
+    if (best.charge && (prefill || !$("#exo-charge").value)) $("#exo-charge").value = best.charge;
+  },
+
   groupSeries() {
     const map = {}, order = [];
     for (const s of this.st.series) {
@@ -250,6 +283,8 @@ const Chrono = {
 
     el.querySelector("#recap-save").onclick = () => {
       if (!muscle) { alert("Choisis le muscle travaillé avant d'enregistrer 😉"); return; }
+      const exercices = this.groupSeries();
+      const records = this.detectRecords(exercices); // avant l'ajout, sinon la séance se compare à elle-même
       Store.addSeance({
         id: "s" + Date.now(),
         profil: this.st.profil,
@@ -262,11 +297,12 @@ const Chrono = {
         nbSeries: t.nbSeries,
         muscle,
         calories: cal,
-        exercices: this.groupSeries()
+        exercices
       });
       close();
       this.showIdle();
-      UI.show("stats");
+      if (records.length) this.celebrate(records);
+      else UI.show("stats");
     };
 
     el.querySelector("#recap-cancel").onclick = () => {
@@ -282,6 +318,37 @@ const Chrono = {
         this.showIdle();
       }
     };
+  },
+
+  /* ---- records battus ---- */
+  detectRecords(exercices) {
+    const records = [];
+    for (const ex of exercices) {
+      const cur = Math.max(...ex.series.map(x => x.charge || 0), 0);
+      if (cur <= 0) continue;
+      let prev = 0;
+      Store.data.seances
+        .filter(s => s.profil === this.st.profil)
+        .forEach(s => (s.exercices || []).forEach(e => {
+          if (e.nom === ex.nom) e.series.forEach(x => { if ((x.charge || 0) > prev) prev = x.charge; });
+        }));
+      // on ne fête que les records battus, pas la première saisie d'un exercice
+      if (prev > 0 && cur > prev) records.push({ nom: ex.nom, charge: cur, ancien: prev });
+    }
+    return records;
+  },
+
+  celebrate(records) {
+    const { el, close } = openModal(`
+      <div class="celebrate-emoji">🏆</div>
+      <h3 style="text-align:center">Record${records.length > 1 ? "s" : ""} battu${records.length > 1 ? "s" : ""} !</h3>
+      <div>${records.map(r => `
+        <div class="record-row"><span>${esc(r.nom)}</span>
+        <strong>${r.charge} kg</strong><small>avant : ${r.ancien} kg</small></div>`).join("")}</div>
+      <button class="btn btn-accent" id="celebrate-ok">Trop fort·e 💪</button>
+    `);
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 300]);
+    el.querySelector("#celebrate-ok").onclick = () => { close(); UI.show("stats"); };
   },
 
   /* ---- wake lock : garder l'écran allumé ---- */

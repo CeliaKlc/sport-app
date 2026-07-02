@@ -1,5 +1,5 @@
 /* Service worker : met l'app en cache pour qu'elle fonctionne sans réseau à la salle. */
-const CACHE = "sportapp-v4";
+const CACHE = "sportapp-v5";
 const ASSETS = [
   ".",
   "index.html",

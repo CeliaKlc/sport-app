@@ -6,11 +6,60 @@ const Stats = {
   render() {
     const seances = Store.seances().slice().sort((a, b) => b.debut - a.debut);
     this.renderBackupBanner();
+    this.renderStreak();
     this.renderWeekCards(seances);
     this.renderWeeksChart(seances);
     this.renderMuscles(seances);
     this.renderExoProgress(seances);
+    this.renderRecords(seances);
     this.renderHistory(seances);
+  },
+
+  /* ---- série d'assiduité (streak) ----
+     Une semaine est validée si tu as fait autant de jours de séance que de jours
+     d'entraînement prévus au planning (les jours « Repos » ne comptent donc pas
+     contre toi). Sans planning cette semaine-là : 3 séances minimum. */
+  computeStreak() {
+    const plan = Store.data.planning[Store.current] || {};
+    const doneDates = new Set(Store.seances().map(s => s.date));
+    const weekOk = monday => {
+      let planned = 0, done = 0;
+      for (let i = 0; i < 7; i++) {
+        const iso = dateToISO(addDays(monday, i));
+        const tag = plan[iso];
+        if (tag && tag !== "Repos") planned++;
+        if (doneDates.has(iso)) done++;
+      }
+      return done >= (planned > 0 ? planned : 3);
+    };
+    const thisMonday = mondayOf(new Date());
+    let streak = weekOk(thisMonday) ? 1 : 0; // la semaine en cours compte dès qu'elle est complète
+    let m = addDays(thisMonday, -7);
+    while (weekOk(m) && streak < 520) { streak++; m = addDays(m, -7); }
+    return streak;
+  },
+
+  renderStreak() {
+    const streak = this.computeStreak();
+    const el = $("#streak-card");
+    el.classList.toggle("hidden", !streak);
+    if (!streak) return;
+    el.innerHTML = `<span class="flame">🔥</span><div>
+      <strong>${streak} semaine${streak > 1 ? "s" : ""} d'assiduité</strong><br>
+      <small>Toutes tes séances prévues sont faites — les jours de repos préservent la flamme 😌</small></div>`;
+  },
+
+  renderRecords(seances) {
+    const best = {};
+    seances.forEach(s => (s.exercices || []).forEach(e => e.series.forEach(x => {
+      const c = x.charge || 0;
+      if (c > 0 && (!best[e.nom] || c > best[e.nom].charge)) best[e.nom] = { charge: c, date: s.date };
+    })));
+    const rows = Object.entries(best).sort((a, b) => b[1].charge - a[1].charge);
+    $("#stats-records").innerHTML = rows.length
+      ? rows.map(([nom, r]) => `<div class="record-row"><span>${esc(nom)}</span>
+          <strong>${r.charge} kg</strong><small>${esc(fmtDateFR(r.date))}</small></div>`).join("")
+      : `<div class="chart-empty">Tes records apparaîtront ici dès que tu noteras tes charges 🏆</div>`;
   },
 
   renderBackupBanner() {

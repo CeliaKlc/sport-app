@@ -33,8 +33,52 @@ const Planning = {
   render() {
     $("#plan-week").classList.toggle("hidden", this.mode !== "week");
     $("#plan-month").classList.toggle("hidden", this.mode !== "month");
+    if (this.mode !== "week") $("#plan-rest").classList.add("hidden");
     if (this.mode === "week") this.renderWeek();
     else this.renderMonth();
+  },
+
+  /* ---- 2 jours de repos obligatoires par semaine ---- */
+  nbRepos(monday) {
+    const plan = this.plan();
+    let n = 0;
+    for (let i = 0; i < 7; i++) if (plan[dateToISO(addDays(monday, i))] === "Repos") n++;
+    return n;
+  },
+
+  // jours de repos conseillés : ceux où vous vous entraînez le moins d'habitude
+  suggestRestOrder() {
+    const seances = Store.seances();
+    if (seances.length < 5) return [2, 6, 5, 3, 0, 1, 4]; // défaut : mercredi, dimanche…
+    const counts = [0, 0, 0, 0, 0, 0, 0];
+    seances.forEach(s => { counts[(isoToDate(s.date).getDay() + 6) % 7]++; });
+    return counts.map((c, i) => ({ c, i }))
+      .sort((a, b) => a.c - b.c || b.i - a.i)
+      .map(x => x.i);
+  },
+
+  renderRestBanner(monday) {
+    const el = $("#plan-rest");
+    const nb = this.nbRepos(monday);
+    if (nb >= 2) { el.innerHTML = ""; el.classList.add("hidden"); return; }
+    el.classList.remove("hidden");
+    el.innerHTML = `<div class="banner">
+      <span>💤 Jours de repos posés : <strong>${nb}/2</strong> — le muscle se construit au repos&nbsp;!</span>
+      <button class="btn btn-small btn-accent">Placer</button></div>`;
+    el.querySelector("button").onclick = () => this.autoRest(monday);
+  },
+
+  autoRest(monday) {
+    const plan = this.plan();
+    let nb = this.nbRepos(monday);
+    for (const i of this.suggestRestOrder()) {
+      if (nb >= 2) break;
+      const iso = dateToISO(addDays(monday, i));
+      if (!plan[iso]) { plan[iso] = "Repos"; nb++; } // ne remplace jamais un jour déjà planifié
+    }
+    Store.save();
+    if (nb < 2) alert("Ta semaine est pleine : libère un jour si tu veux poser ton 2e repos 💤");
+    this.render();
   },
 
   /* ---- vue semaine ---- */
@@ -47,6 +91,7 @@ const Planning = {
     const plan = this.plan();
     const done = this.realizedByDate();
     const today = todayISO();
+    this.renderRestBanner(monday);
 
     $("#plan-week").innerHTML = Array.from({ length: 7 }, (_, i) => {
       const d = addDays(monday, i);

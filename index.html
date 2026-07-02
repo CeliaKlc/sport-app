@@ -48,6 +48,7 @@
   <!-- ===== STATS ===== -->
   <section id="view-stats" class="view">
     <div id="backup-banner" class="banner hidden"></div>
+    <div id="streak-card" class="streak-card hidden"></div>
     <h2 class="section-title">Cette semaine</h2>
     <div class="cards-grid" id="stats-week-cards"></div>
 
@@ -62,6 +63,9 @@
       <select id="stats-exo-select" class="input"></select>
       <div id="stats-exo-chart"></div>
     </div>
+
+    <h2 class="section-title">🏆 Mes records</h2>
+    <div class="card" id="stats-records"></div>
 
     <h2 class="section-title">Historique des séances</h2>
     <div id="stats-history"></div>
@@ -111,6 +115,7 @@
             <button id="btn-add-serie" class="btn btn-accent">＋</button>
           </div>
         </div>
+        <div id="exo-hint" class="exo-hint hidden"></div>
         <ul id="exo-log" class="exo-log"></ul>
       </div>
     </div>
@@ -128,6 +133,7 @@
       <button id="plan-save-type" class="chip">💾 Semaine type</button>
       <button id="plan-apply-type" class="chip">📋 Appliquer la semaine type</button>
     </div>
+    <div id="plan-rest" class="hidden"></div>
     <div id="plan-week"></div>
     <div id="plan-month" class="hidden"></div>
     <p class="hint">Touche l'étiquette «&nbsp;Prévu&nbsp;» d'un jour pour choisir le muscle à travailler.
