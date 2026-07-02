@@ -152,20 +152,17 @@ const Chrono = {
   /* ---- carnet d'exercices ---- */
   fillExoSelect() {
     const sel = $("#exo-select");
+    // séance préparée dans le planning : ses exercices passent en tête et sont présélectionnés
+    const dayISO = dateToISO(new Date(this.st.events[0].t));
+    const prog = (Store.data.programme[this.st.profil] || {})[dayISO] || [];
     let html = "";
-    for (const muscle of Object.keys(EXOS)) {
-      html += `<optgroup label="${esc(muscle)}">` +
-        EXOS[muscle].map(e => `<option value="${esc(e)}">${esc(e)}</option>`).join("") +
+    if (prog.length) {
+      html += `<optgroup label="📋 Prévu aujourd'hui">` +
+        prog.map(e => `<option value="${esc(e)}">${esc(e)}</option>`).join("") +
         `</optgroup>`;
     }
-    const perso = Store.data.exosPerso[this.st.profil] || [];
-    if (perso.length) {
-      html += `<optgroup label="Mes exercices">` +
-        perso.map(e => `<option value="${esc(e)}">${esc(e)}</option>`).join("") +
-        `</optgroup>`;
-    }
-    html += `<option value="__autre">➕ Autre exercice…</option>`;
-    sel.innerHTML = html;
+    sel.innerHTML = html + exoOptionsHtml(this.st.profil);
+    if (prog.length) sel.value = prog[0];
   },
 
   addSerie() {
@@ -252,9 +249,11 @@ const Chrono = {
     const dateISO = dateToISO(new Date(this.st.events[0].t));
     const planned = (Store.data.planning[this.st.profil] || {})[dateISO];
 
-    const chips = MUSCLES.map(m =>
+    const allTags = MUSCLES.concat(TAGS_COMBOS, Store.data.tagsPerso[this.st.profil] || []);
+    if (planned && planned !== "Repos" && !allTags.includes(planned)) allTags.unshift(planned);
+    const chips = allTags.map(m =>
       `<button class="chip${planned === m ? " on" : ""}" data-muscle="${esc(m)}"
-        style="${planned === m ? "background:" + MUSCLE_COLORS[m] : ""}">${esc(m)}</button>`).join("");
+        style="${planned === m ? "background:" + tagColor(m) : ""}">${esc(m)}</button>`).join("");
 
     const { el, close } = openModal(`
       <h3>Séance terminée 💪</h3>
@@ -273,12 +272,12 @@ const Chrono = {
       <button id="recap-discard" class="btn btn-outline">🗑 Abandonner sans enregistrer</button>
     `);
 
-    let muscle = planned && MUSCLES.includes(planned) ? planned : null;
+    let muscle = planned && planned !== "Repos" ? planned : null;
     el.querySelectorAll("[data-muscle]").forEach(b => b.onclick = () => {
       muscle = b.dataset.muscle;
       el.querySelectorAll("[data-muscle]").forEach(x => { x.classList.remove("on"); x.style.background = ""; });
       b.classList.add("on");
-      b.style.background = MUSCLE_COLORS[muscle];
+      b.style.background = tagColor(muscle);
     });
 
     el.querySelector("#recap-save").onclick = () => {

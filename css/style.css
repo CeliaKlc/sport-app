@@ -182,7 +182,13 @@ svg{display:block;width:100%;height:auto}
 .btn-nav{width:44px;flex:none;padding:8px 0;font-size:20px}
 .plan-label{font-weight:700;font-size:15px;text-align:center;flex:1}
 .planning-actions{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
-.day-row{background:var(--card);border-radius:var(--radius);padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;gap:10px}
+.day-row{background:var(--card);border-radius:var(--radius);padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.rest-warn{flex-basis:100%;font-size:12px;color:var(--red);line-height:1.4;padding-top:2px}
+.prog-count{font-size:11.5px;color:var(--muted)}
+.picker-section{margin-top:14px}
+.picker-add{width:54px;flex:none;padding:0;font-size:18px}
+.chip-exo button{background:none;border:none;color:inherit;font-size:13px;margin-left:6px;padding:0}
+#picker-custom{margin-top:8px}
 .day-row.today{box-shadow:inset 0 0 0 1.5px var(--accent)}
 .day-info{width:76px;flex:none}
 .day-name{font-weight:700;font-size:14px}

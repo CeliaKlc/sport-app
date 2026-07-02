@@ -74,6 +74,24 @@ function openModal(html) {
   return { el: wrap.firstElementChild, close };
 }
 
+/* --- options du sélecteur d'exercices (bibliothèque + persos) --- */
+function exoOptionsHtml(profil) {
+  let html = "";
+  for (const muscle of Object.keys(EXOS)) {
+    html += `<optgroup label="${esc(muscle)}">` +
+      EXOS[muscle].map(e => `<option value="${esc(e)}">${esc(e)}</option>`).join("") +
+      `</optgroup>`;
+  }
+  const perso = Store.data.exosPerso[profil] || [];
+  if (perso.length) {
+    html += `<optgroup label="Mes exercices">` +
+      perso.map(e => `<option value="${esc(e)}">${esc(e)}</option>`).join("") +
+      `</optgroup>`;
+  }
+  html += `<option value="__autre">➕ Autre exercice…</option>`;
+  return html;
+}
+
 /* --- graphique en barres (SVG) --- */
 function svgBars(items, opts = {}) {
   // items : [{label, value, color?}] — opts.fmt : v => texte au-dessus de la barre

@@ -93,11 +93,19 @@ const Planning = {
     const today = todayISO();
     this.renderRestBanner(monday);
 
+    const progAll = Store.data.programme[Store.current] || {};
     $("#plan-week").innerHTML = Array.from({ length: 7 }, (_, i) => {
       const d = addDays(monday, i);
       const iso = dateToISO(d);
       const prevu = plan[iso];
       const realises = done[iso] || [];
+      const nbExos = (progAll[iso] || []).length;
+      // conflit de repos sur les tags du jour (prévu ou réalisé)
+      let conflit = null;
+      for (const t of this.dayTags(iso)) {
+        conflit = this.conflictFor(iso, t);
+        if (conflit) break;
+      }
       return `
       <div class="day-row${iso === today ? " today" : ""}">
         <div class="day-info">
@@ -107,46 +115,155 @@ const Planning = {
         <div class="day-slot">
           <span class="slot-lbl">Prévu</span>
           <button class="tag-btn${prevu ? " set" : ""}" data-date="${iso}"
-            style="${prevu ? "background:" + (MUSCLE_COLORS[prevu] || "#64748b") + ";border-color:transparent" : ""}">
+            style="${prevu ? "background:" + tagColor(prevu) + ";border-color:transparent" : ""}">
             ${prevu ? esc(prevu) : "＋ Prévoir"}
           </button>
+          ${nbExos ? `<span class="prog-count">📋 ${nbExos} exo${nbExos > 1 ? "s" : ""}</span>` : ""}
         </div>
         <div class="day-slot">
           <span class="slot-lbl">Réalisé</span>
           <span class="done-tags">${
             realises.length
-              ? realises.map(m => `<span class="tag" style="background:${MUSCLE_COLORS[m] || "#64748b"}">${esc(m)}</span>`).join("")
+              ? realises.map(m => `<span class="tag" style="background:${tagColor(m)}">${esc(m)}</span>`).join("")
               : "—"
           }</span>
         </div>
+        ${conflit ? `<span class="rest-warn">⚠️ Moins de 72 h de repos pour&nbsp;: ${esc(conflit.groupes.join(", "))} (avec ${esc(conflit.tag2)} du ${esc(fmtDateFR(conflit.other))})</span>` : ""}
       </div>`;
     }).join("");
 
     $$("#plan-week [data-date]").forEach(b => b.onclick = () => this.openTagPicker(b.dataset.date));
   },
 
+  /* ---- alerte repos < 72 h : même groupe musculaire à moins de 3 jours d'écart ---- */
+  dayTags(iso) {
+    const tags = [];
+    const t = this.plan()[iso];
+    if (t && t !== "Repos") tags.push(t);
+    Store.seances().filter(s => s.date === iso && s.muscle).forEach(s => tags.push(s.muscle));
+    return tags;
+  },
+
+  conflictFor(iso, tag) {
+    const gs = muscleGroups(tag);
+    if (!gs.length) return null;
+    for (const off of [-2, -1, 1, 2]) {
+      const other = dateToISO(addDays(isoToDate(iso), off));
+      for (const t2 of this.dayTags(other)) {
+        const communs = muscleGroups(t2).filter(g => gs.includes(g));
+        if (communs.length) return { other, tag2: t2, groupes: communs.map(g => GROUP_LABELS[g]) };
+      }
+    }
+    return null;
+  },
+
+  warnConflict(iso, tag) {
+    const c = this.conflictFor(iso, tag);
+    if (c) alert(`⚠️ Repos insuffisant !\n\n« ${c.tag2} » le ${fmtDateFull(c.other)} sollicite aussi : ${c.groupes.join(", ")}.\n\nLaisse au moins 72 h au même groupe musculaire pour qu'il se reconstruise.`);
+  },
+
+  /* ---- panneau du jour : programme + exercices prévus ---- */
   openTagPicker(iso) {
     const plan = this.plan();
+    const progAll = Store.data.programme[Store.current] || (Store.data.programme[Store.current] = {});
+    const persoTags = Store.data.tagsPerso[Store.current] || (Store.data.tagsPerso[Store.current] = []);
+
     const { el, close } = openModal(`
-      <h3>${fmtDateFull(iso)} — quoi au programme&nbsp;?</h3>
-      <div class="chip-list">
-        ${PLAN_TAGS.map(t => `<button class="chip${plan[iso] === t ? " on" : ""}" data-tag="${esc(t)}"
-          style="${plan[iso] === t ? "background:" + MUSCLE_COLORS[t] : ""}">${esc(t)}</button>`).join("")}
+      <h3>${esc(fmtDateFull(iso))}</h3>
+      <p class="slot-lbl">Programme du jour</p>
+      <div class="chip-list" id="picker-tags"></div>
+      <div id="picker-custom" class="exo-row hidden">
+        <input id="picker-custom-input" class="input" placeholder="Ex : Fessiers + mollets">
+        <button id="picker-custom-ok" class="btn btn-accent picker-add">OK</button>
       </div>
+      <p class="slot-lbl picker-section">Exercices prévus (facultatif)</p>
+      <div class="chip-list" id="picker-exos"></div>
+      <div class="exo-row">
+        <select id="picker-exo-select" class="input"></select>
+        <button id="picker-exo-add" class="btn btn-accent picker-add">＋</button>
+      </div>
+      <input id="picker-exo-custom" class="input hidden picker-section" placeholder="Nom de l'exercice">
       <button class="btn btn-outline" data-clear>Effacer ce jour</button>
+      <button class="btn btn-accent" data-done>Terminé</button>
     `);
-    el.querySelectorAll("[data-tag]").forEach(b => b.onclick = () => {
-      plan[iso] = b.dataset.tag;
+
+    const renderTags = () => {
+      const all = PLAN_TAGS.concat(TAGS_COMBOS, persoTags.filter(t => !PLAN_TAGS.includes(t) && !TAGS_COMBOS.includes(t)));
+      el.querySelector("#picker-tags").innerHTML = all.map(t =>
+        `<button class="chip${plan[iso] === t ? " on" : ""}" data-tag="${esc(t)}"
+          style="${plan[iso] === t ? "background:" + tagColor(t) : ""}">${esc(t)}</button>`).join("") +
+        `<button class="chip" data-newtag>➕ Autre…</button>`;
+      el.querySelectorAll("[data-tag]").forEach(b => b.onclick = () => {
+        plan[iso] = b.dataset.tag;
+        Store.save();
+        renderTags();
+        this.render();
+        this.warnConflict(iso, b.dataset.tag);
+      });
+      el.querySelector("[data-newtag]").onclick = () => {
+        el.querySelector("#picker-custom").classList.remove("hidden");
+        el.querySelector("#picker-custom-input").focus();
+      };
+    };
+
+    el.querySelector("#picker-custom-ok").onclick = () => {
+      const t = el.querySelector("#picker-custom-input").value.trim();
+      if (!t) return;
+      if (!persoTags.includes(t) && !PLAN_TAGS.includes(t) && !TAGS_COMBOS.includes(t)) persoTags.push(t);
+      plan[iso] = t;
       Store.save();
-      close();
+      el.querySelector("#picker-custom-input").value = "";
+      el.querySelector("#picker-custom").classList.add("hidden");
+      renderTags();
       this.render();
-    });
+      this.warnConflict(iso, t);
+    };
+
+    const renderExos = () => {
+      const list = progAll[iso] || [];
+      el.querySelector("#picker-exos").innerHTML = list.length
+        ? list.map((e, i) => `<span class="chip chip-exo">${esc(e)}<button data-rm="${i}">✕</button></span>`).join("")
+        : `<span class="hint">Aucun — le chrono proposera toute la bibliothèque.</span>`;
+      el.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => {
+        progAll[iso].splice(Number(b.dataset.rm), 1);
+        if (!progAll[iso].length) delete progAll[iso];
+        Store.save();
+        renderExos();
+        this.render();
+      });
+    };
+
+    const sel = el.querySelector("#picker-exo-select");
+    sel.innerHTML = exoOptionsHtml(Store.current);
+    sel.onchange = () => el.querySelector("#picker-exo-custom").classList.toggle("hidden", sel.value !== "__autre");
+    el.querySelector("#picker-exo-add").onclick = () => {
+      let exo = sel.value;
+      if (exo === "__autre") {
+        exo = el.querySelector("#picker-exo-custom").value.trim();
+        if (!exo) return;
+        Store.addExoPerso(exo);
+        sel.innerHTML = exoOptionsHtml(Store.current);
+        el.querySelector("#picker-exo-custom").value = "";
+        el.querySelector("#picker-exo-custom").classList.add("hidden");
+      }
+      const list = (progAll[iso] = progAll[iso] || []);
+      if (!list.includes(exo)) list.push(exo);
+      Store.save();
+      renderExos();
+      this.render();
+    };
+
     el.querySelector("[data-clear]").onclick = () => {
       delete plan[iso];
+      delete progAll[iso];
       Store.save();
       close();
       this.render();
     };
+    el.querySelector("[data-done]").onclick = () => close();
+
+    renderTags();
+    renderExos();
   },
 
   /* ---- semaine type ---- */
@@ -197,8 +314,8 @@ const Planning = {
       const prevu = plan[iso];
       const realises = done[iso] || [];
       const dots =
-        realises.map(x => `<span class="dot done" style="background:${MUSCLE_COLORS[x] || "#64748b"}"></span>`).join("") +
-        (prevu && !realises.length ? `<span class="dot" style="background:${MUSCLE_COLORS[prevu] || "#64748b"}"></span>` : "");
+        realises.map(x => `<span class="dot done" style="background:${tagColor(x)}"></span>`).join("") +
+        (prevu && !realises.length ? `<span class="dot" style="background:${tagColor(prevu)}"></span>` : "");
       html += `<button class="mcell${out ? " out" : ""}${iso === today ? " today" : ""}" data-date="${iso}">
         <span>${d.getDate()}</span><span class="dots">${dots}</span>
       </button>`;

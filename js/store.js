@@ -15,20 +15,64 @@ const MUSCLE_COLORS = {
   "Repos": "#64748b"
 };
 
+// programmes combinés proposés en plus des tags de base
+const TAGS_COMBOS = [
+  "Fessiers + quadriceps", "Fessiers + ischios", "Jambes + fessiers",
+  "Dos + biceps", "Pecs + triceps", "Abdos + pecs", "Épaules + bras"
+];
+
+// couleur stable pour n'importe quel tag (les personnalisés inclus)
+const TAG_PALETTE = ["#f97316", "#22c55e", "#ef4444", "#eab308", "#a855f7", "#14b8a6", "#38bdf8", "#ec4899", "#84cc16", "#f43f5e", "#06b6d4", "#d946ef"];
+function tagColor(tag) {
+  if (MUSCLE_COLORS[tag]) return MUSCLE_COLORS[tag];
+  let h = 0;
+  for (let i = 0; i < tag.length; i++) h = (h * 31 + tag.charCodeAt(i)) >>> 0;
+  return TAG_PALETTE[h % TAG_PALETTE.length];
+}
+
+/* groupes musculaires sollicités par un tag (pour l'alerte de repos < 72 h) */
+const GROUP_KEYWORDS = {
+  fessiers:   ["fessier", "glute", "jambe", "legs", "lower"],
+  quadriceps: ["quadri", "cuisse", "squat", "jambe", "legs", "lower"],
+  ischios:    ["ischio", "jambe", "legs", "lower"],
+  mollets:    ["mollet", "jambe", "legs", "lower"],
+  dos:        ["dos", "pull", "upper", "tirage", "rowing"],
+  pecs:       ["pec", "push", "upper"],
+  epaules:    ["épaule", "epaule", "push", "upper"],
+  biceps:     ["biceps", "pull", "upper"],
+  triceps:    ["triceps", "push", "upper"],
+  abdos:      ["abdo", "gainage"]
+};
+const GROUP_LABELS = {
+  fessiers: "fessiers", quadriceps: "quadriceps", ischios: "ischios", mollets: "mollets",
+  dos: "dos", pecs: "pecs", epaules: "épaules", biceps: "biceps", triceps: "triceps", abdos: "abdos"
+};
+function muscleGroups(tag) {
+  const t = (tag || "").toLowerCase();
+  if (!t || t === "repos" || t === "cardio") return [];
+  const out = [];
+  for (const [g, kws] of Object.entries(GROUP_KEYWORDS)) {
+    if (kws.some(k => t.includes(k))) out.push(g);
+  }
+  return out;
+}
+
 const EXOS = {
   "Push (pecs · épaules · triceps)": [
     "Développé couché", "Développé incliné", "Écartés (pec fly)", "Dips", "Pompes",
+    "Développé pecs (machine)", "Développé épaules (machine)",
     "Développé militaire", "Élévations latérales", "Élévations frontales",
     "Extension triceps poulie", "Barre au front"
   ],
   "Pull (dos · biceps)": [
     "Tirage vertical", "Tirage horizontal", "Rowing barre", "Rowing haltère",
     "Soulevé de terre", "Pull-over", "Oiseau (arrière d'épaule)",
-    "Curl biceps", "Curl marteau"
+    "Extension lombaires (banc)", "Curl biceps", "Curl marteau"
   ],
-  "Legs / Lower (jambes)": [
-    "Squat", "Presse à cuisses", "Fentes", "Leg extension", "Leg curl",
-    "Hip thrust", "Soulevé de terre roumain", "Mollets debout"
+  "Legs / Lower (jambes · fessiers)": [
+    "Squat", "Presse à cuisses", "Fentes", "Fentes bulgares", "Leg extension", "Leg curl",
+    "Hip thrust", "Soulevé de terre roumain", "Soulevé de terre jambes tendues",
+    "Abducteurs (machine)", "Adducteurs (machine)", "Kickback fessiers (poulie)", "Mollets debout"
   ],
   "Abdos": ["Crunch", "Gainage", "Relevés de jambes"],
   "Cardio": ["Tapis de course", "Vélo", "Rameur", "Elliptique", "Escalier"]
@@ -50,7 +94,9 @@ const Store = {
       seances: [],
       planning: { celia: {}, jeremy: {} },
       semaineType: { celia: {}, jeremy: {} },
-      exosPerso: { celia: [], jeremy: [] }
+      exosPerso: { celia: [], jeremy: [] },
+      tagsPerso: { celia: [], jeremy: [] },
+      programme: { celia: {}, jeremy: {} }   // exercices prévus par jour
     };
   },
 
@@ -61,7 +107,7 @@ const Store = {
     this.data = Object.assign(def, saved || {});
     // fusionne les sous-objets pour ne jamais perdre un profil manquant
     const def2 = this.defaults();
-    for (const k of ["profils", "planning", "semaineType", "exosPerso"]) {
+    for (const k of ["profils", "planning", "semaineType", "exosPerso", "tagsPerso", "programme"]) {
       this.data[k] = Object.assign({}, def2[k], this.data[k] || {});
     }
     this.current = localStorage.getItem(this.PROFILE_KEY) || null;

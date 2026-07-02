@@ -118,7 +118,7 @@ const Stats = {
       .map(([m, n]) => `
         <div class="muscle-row">
           <span class="name">${esc(m)}</span>
-          <span class="bar"><i style="width:${n / max * 100}%;background:${MUSCLE_COLORS[m] || "var(--accent)"}"></i></span>
+          <span class="bar"><i style="width:${n / max * 100}%;background:${tagColor(m)}"></i></span>
           <span class="n">${n}×</span>
         </div>`).join("");
   },
@@ -170,7 +170,7 @@ const Stats = {
       <div class="hist-item" data-id="${s.id}">
         <div class="hist-top">
           <span class="hist-date">${fmtDateFull(s.date)}</span>
-          <span class="tag" style="background:${MUSCLE_COLORS[s.muscle] || "#64748b"}">${esc(s.muscle || "?")}</span>
+          <span class="tag" style="background:${s.muscle ? tagColor(s.muscle) : "#64748b"}">${esc(s.muscle || "?")}</span>
         </div>
         <div class="hist-meta">
           <span>⏱ ${fmtDuree(s.tempsActif)} actif / ${fmtDuree(s.dureeTotale)}</span>
