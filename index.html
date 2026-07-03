@@ -76,6 +76,8 @@
     <div id="chrono-idle" class="chrono-idle">
       <p class="chrono-hint">Prêt·e pour ta séance&nbsp;?</p>
       <button id="btn-start" class="btn btn-accent btn-big">▶&nbsp; Démarrer la séance</button>
+      <p class="hint">🔥 Échauffe-toi 5 à 10 min (cardio léger + séries légères)
+      avant de charger — c'est ta meilleure assurance anti-blessure.</p>
     </div>
 
     <div id="chrono-run" class="hidden">
@@ -87,9 +89,7 @@
       <div id="ch-panel" class="chrono-panel mode-active">
         <div id="ch-mode" class="chrono-mode">ACTIVITÉ</div>
         <div id="ch-seg" class="chrono-seg">00:00</div>
-        <div id="ch-pause-info" class="chrono-pause-info hidden">
-          Vert à <span id="ch-seuil"></span> — respire, hydrate-toi 💧
-        </div>
+        <div id="ch-pause-info" class="chrono-pause-info hidden"></div>
       </div>
 
       <div class="chrono-sums">
@@ -150,9 +150,12 @@
       <label>Poids (kg)
         <input id="set-poids" class="input" type="number" inputmode="decimal" step="0.1" min="20">
       </label>
-      <label>Seuil de pause (minutes) — le chrono passe au vert
+      <label>Seuil de pause (minutes) — exercices polyarticulaires
         <input id="set-seuil" class="input" type="number" inputmode="decimal" step="0.5" min="0.5">
       </label>
+      <p class="hint">Pour les exercices d'isolation (curls, élévations, machines ciblées…),
+      le chrono passe au vert à la moitié de ce seuil (minimum 1 min) : un petit muscle
+      récupère plus vite qu'un squat. Orange = pause trop longue, on refroidit.</p>
       <label>Intensité MET (calcul des calories)
         <input id="set-met" class="input" type="number" inputmode="decimal" step="0.5" min="1" max="12">
       </label>

@@ -40,9 +40,20 @@ const Chrono = {
     else localStorage.removeItem(this.KEY);
   },
 
-  seuilMs() {
+  // repos conseillé pour la pause en cours : seuil complet en polyarticulaire,
+  // moitié (min 1 min) pour un exercice d'isolation
+  pauseSeuilMs() {
     const p = Store.data.profils[this.st ? this.st.profil : Store.current];
-    return (p ? p.seuilPause : 180) * 1000;
+    const base = (p ? p.seuilPause : 180) * 1000;
+    return this.st && this.st.pauseExo && exoIsIso(this.st.pauseExo)
+      ? Math.max(60000, base / 2)
+      : base;
+  },
+
+  updatePauseInfo() {
+    const iso = this.st.pauseExo && exoIsIso(this.st.pauseExo);
+    $("#ch-pause-info").innerHTML =
+      `Repos conseillé : <strong>${fmtChrono(this.pauseSeuilMs())}</strong> (${iso ? "isolation" : "polyarticulaire"}) — hydrate-toi 💧`;
   },
 
   /* ---- calculs sur les horodatages ---- */
@@ -72,11 +83,16 @@ const Chrono = {
   },
 
   lap() {
+    // mémorise l'exercice qui vient d'être travaillé : son type fixe le repos conseillé
+    const exoVal = $("#exo-select").value;
+    this.st.pauseExo = exoVal === "__autre" ? null : exoVal;
     this.st.events.push({ t: Date.now(), type: "pause" });
     this.st.state = "pause";
     this.vibrated = false;
+    this.vibratedOver = false;
     this.persist();
     this.updateButtons();
+    this.updatePauseInfo();
     if (navigator.vibrate) navigator.vibrate(80);
   },
 
@@ -101,7 +117,7 @@ const Chrono = {
     this.updateHint(false);
     this.renderLog();
     this.updateButtons();
-    $("#ch-seuil").textContent = fmtChrono(this.seuilMs());
+    if (this.st.state === "pause") this.updatePauseInfo();
     clearInterval(this.timer);
     this.timer = setInterval(() => this.tick(), 250);
     this.tick();
@@ -132,13 +148,24 @@ const Chrono = {
     $("#ch-seg").textContent = fmtChrono(t.seg);
     $("#ch-act").textContent = fmtChrono(t.act);
     $("#ch-pau").textContent = fmtChrono(t.pau);
-    $("#ch-series").textContent = t.nbSeries;
+    $("#ch-series").textContent = Math.max(t.nbSeries, this.st.series.length);
 
     const panel = $("#ch-panel");
-    panel.classList.remove("mode-active", "mode-pause-red", "mode-pause-green");
+    panel.classList.remove("mode-active", "mode-pause-red", "mode-pause-green", "mode-pause-over");
     if (this.st.state === "active") {
       panel.classList.add("mode-active");
-    } else if (t.seg >= this.seuilMs()) {
+      return;
+    }
+    const seuil = this.pauseSeuilMs();
+    if (t.seg >= seuil * 2) {
+      // pause deux fois trop longue : le muscle refroidit
+      panel.classList.add("mode-pause-over");
+      if (!this.vibratedOver) {
+        this.vibratedOver = true;
+        $("#ch-pause-info").innerHTML = "Ça fait long — reprends avant de refroidir ! 🥶";
+        if (navigator.vibrate) navigator.vibrate([80, 60, 80, 60, 80]);
+      }
+    } else if (t.seg >= seuil) {
       panel.classList.add("mode-pause-green");
       if (!this.vibrated) {
         this.vibrated = true;
@@ -220,11 +247,12 @@ const Chrono = {
       ((b.charge || 0) > (a.charge || 0) ||
        ((b.charge || 0) === (a.charge || 0) && (b.reps || 0) > (a.reps || 0))) ? b : a);
     const fmtS = x => [x.charge ? x.charge + " kg" : null, x.reps ? "× " + x.reps : null].filter(Boolean).join(" ") || "—";
-    // surcharge progressive : à 10 reps on monte la charge, sinon on ajoute une rep
+    // double progression, plage 8-12 : on monte les reps jusqu'à 12, puis la charge
+    // (petit incrément en isolation, +2,5 kg en polyarticulaire) et retour à 8 reps
     let sugg = null;
     if (!best.charge) { if (best.reps) sugg = "essaie × " + (best.reps + 1); }
-    else if ((best.reps || 0) >= 10) sugg = "essaie " + (best.charge + 2.5) + " kg × 8";
-    else sugg = "essaie " + best.charge + " kg × " + ((best.reps || 0) + 1);
+    else if ((best.reps || 0) >= 12) sugg = "essaie " + (best.charge + (exoIsIso(exo) ? 1 : 2.5)) + " kg × 8";
+    else sugg = "essaie " + best.charge + " kg × " + ((best.reps || 0) + 1) + " (objectif 12)";
     hint.innerHTML = `Dernière fois (${esc(fmtDateFR(last.date))}) : ${last.series.map(fmtS).map(esc).join(" · ")}` +
       (sugg ? `<br>💡 <strong>${esc(sugg)}</strong>` : "");
     hint.classList.remove("hidden");
@@ -243,6 +271,8 @@ const Chrono = {
   /* ---- récap de fin de séance ---- */
   openRecap(stopT) {
     const t = this.times(stopT);
+    // le carnet fait foi s'il compte plus de séries que les pauses
+    t.nbSeries = Math.max(t.nbSeries, this.st.series.length);
     const p = Store.data.profils[this.st.profil];
     const cal = Math.round(p.met * p.poids * (t.act / 3600000));
     const moy = t.pauses.length ? t.pauses.reduce((a, b) => a + b, 0) / t.pauses.length : 0;
@@ -323,16 +353,24 @@ const Chrono = {
   detectRecords(exercices) {
     const records = [];
     for (const ex of exercices) {
-      const cur = Math.max(...ex.series.map(x => x.charge || 0), 0);
-      if (cur <= 0) continue;
-      let prev = 0;
+      const curCharge = Math.max(...ex.series.map(x => x.charge || 0), 0);
+      const curReps = Math.max(...ex.series.map(x => x.reps || 0), 0);
+      let prevCharge = 0, prevReps = 0;
       Store.data.seances
         .filter(s => s.profil === this.st.profil)
         .forEach(s => (s.exercices || []).forEach(e => {
-          if (e.nom === ex.nom) e.series.forEach(x => { if ((x.charge || 0) > prev) prev = x.charge; });
+          if (e.nom === ex.nom) e.series.forEach(x => {
+            prevCharge = Math.max(prevCharge, x.charge || 0);
+            if (!(x.charge > 0)) prevReps = Math.max(prevReps, x.reps || 0);
+          });
         }));
       // on ne fête que les records battus, pas la première saisie d'un exercice
-      if (prev > 0 && cur > prev) records.push({ nom: ex.nom, charge: cur, ancien: prev });
+      if (curCharge > 0) {
+        if (prevCharge > 0 && curCharge > prevCharge) records.push({ nom: ex.nom, charge: curCharge, ancien: prevCharge });
+      } else if (curReps > 0 && prevReps > 0 && curReps > prevReps) {
+        // exercice au poids du corps (pompes, gainage…) : le record se mesure en répétitions
+        records.push({ nom: ex.nom, reps: curReps, ancienReps: prevReps });
+      }
     }
     return records;
   },
@@ -343,7 +381,8 @@ const Chrono = {
       <h3 style="text-align:center">Record${records.length > 1 ? "s" : ""} battu${records.length > 1 ? "s" : ""} !</h3>
       <div>${records.map(r => `
         <div class="record-row"><span>${esc(r.nom)}</span>
-        <strong>${r.charge} kg</strong><small>avant : ${r.ancien} kg</small></div>`).join("")}</div>
+        <strong>${r.charge ? r.charge + " kg" : "× " + r.reps}</strong>
+        <small>avant : ${r.charge ? r.ancien + " kg" : "× " + r.ancienReps}</small></div>`).join("")}</div>
       <button class="btn btn-accent" id="celebrate-ok">Trop fort·e 💪</button>
     `);
     if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 300]);

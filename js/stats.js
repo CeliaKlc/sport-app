@@ -52,13 +52,18 @@ const Stats = {
   renderRecords(seances) {
     const best = {};
     seances.forEach(s => (s.exercices || []).forEach(e => e.series.forEach(x => {
-      const c = x.charge || 0;
-      if (c > 0 && (!best[e.nom] || c > best[e.nom].charge)) best[e.nom] = { charge: c, date: s.date };
+      const b = best[e.nom] = best[e.nom] || { charge: 0, reps: 0, date: s.date };
+      if ((x.charge || 0) > b.charge) { b.charge = x.charge; b.date = s.date; }
+      // au poids du corps (pompes, gainage…) : record en répétitions
+      if (!b.charge && (x.reps || 0) > b.reps) { b.reps = x.reps; b.date = s.date; }
     })));
-    const rows = Object.entries(best).sort((a, b) => b[1].charge - a[1].charge);
+    const rows = Object.entries(best)
+      .filter(([, r]) => r.charge > 0 || r.reps > 0)
+      .sort((a, b) => (b[1].charge - a[1].charge) || (b[1].reps - a[1].reps));
     $("#stats-records").innerHTML = rows.length
       ? rows.map(([nom, r]) => `<div class="record-row"><span>${esc(nom)}</span>
-          <strong>${r.charge} kg</strong><small>${esc(fmtDateFR(r.date))}</small></div>`).join("")
+          <strong>${r.charge ? r.charge + " kg" : "× " + r.reps + " reps"}</strong>
+          <small>${esc(fmtDateFR(r.date))}</small></div>`).join("")
       : `<div class="chart-empty">Tes records apparaîtront ici dès que tu noteras tes charges 🏆</div>`;
   },
 

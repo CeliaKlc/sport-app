@@ -78,6 +78,18 @@ const EXOS = {
   "Cardio": ["Tapis de course", "Vélo", "Rameur", "Elliptique", "Escalier"]
 };
 
+/* Exercices d'isolation : un seul groupe musculaire → repos plus court (moitié du seuil, min 1 min).
+   Tout le reste (squat, presses, tirages…) est polyarticulaire → seuil complet. */
+const EXOS_ISO = [
+  "Leg extension", "Leg curl", "Abducteurs (machine)", "Adducteurs (machine)",
+  "Kickback fessiers (poulie)", "Mollets debout",
+  "Écartés (pec fly)", "Élévations latérales", "Élévations frontales", "Oiseau (arrière d'épaule)",
+  "Pull-over", "Extension lombaires (banc)",
+  "Curl biceps", "Curl marteau", "Extension triceps poulie", "Barre au front",
+  "Crunch", "Gainage", "Relevés de jambes"
+];
+function exoIsIso(nom) { return EXOS_ISO.includes(nom); }
+
 const Store = {
   KEY: "sportapp-data",
   PROFILE_KEY: "sportapp-profil",
