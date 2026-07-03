@@ -128,14 +128,16 @@ const Planning = {
               : "—"
           }</span>
         </div>
-        ${conflit ? `<span class="rest-warn">⚠️ Moins de 72 h de repos pour&nbsp;: ${esc(conflit.groupes.join(", "))} (avec ${esc(conflit.tag2)} du ${esc(fmtDateFR(conflit.other))})</span>` : ""}
+        ${conflit ? `<span class="rest-warn">⚠️ Moins de 48 h de repos pour&nbsp;: ${esc(conflit.groupes.join(", "))} (avec ${esc(conflit.tag2)} du ${esc(fmtDateFR(conflit.other))})</span>` : ""}
       </div>`;
     }).join("");
 
     $$("#plan-week [data-date]").forEach(b => b.onclick = () => this.openTagPicker(b.dataset.date));
   },
 
-  /* ---- alerte repos < 72 h : même groupe musculaire à moins de 3 jours d'écart ---- */
+  /* ---- alerte repos insuffisant : même groupe musculaire deux jours consécutifs.
+     Le consensus muscu : 48 h minimum entre deux sollicitations d'un même muscle —
+     un écart de 2 jours (fréquence 2×/semaine) est donc volontairement accepté. ---- */
   dayTags(iso) {
     const tags = [];
     const t = this.plan()[iso];
@@ -147,7 +149,7 @@ const Planning = {
   conflictFor(iso, tag) {
     const gs = muscleGroups(tag);
     if (!gs.length) return null;
-    for (const off of [-2, -1, 1, 2]) {
+    for (const off of [-1, 1]) {
       const other = dateToISO(addDays(isoToDate(iso), off));
       for (const t2 of this.dayTags(other)) {
         const communs = muscleGroups(t2).filter(g => gs.includes(g));
@@ -159,7 +161,7 @@ const Planning = {
 
   warnConflict(iso, tag) {
     const c = this.conflictFor(iso, tag);
-    if (c) alert(`⚠️ Repos insuffisant !\n\n« ${c.tag2} » le ${fmtDateFull(c.other)} sollicite aussi : ${c.groupes.join(", ")}.\n\nLaisse au moins 72 h au même groupe musculaire pour qu'il se reconstruise.`);
+    if (c) alert(`⚠️ Repos insuffisant !\n\n« ${c.tag2} » le ${fmtDateFull(c.other)} sollicite aussi : ${c.groupes.join(", ")}.\n\nLaisse au moins 48 h (un jour complet) au même groupe musculaire pour qu'il se reconstruise.`);
   },
 
   /* ---- panneau du jour : programme + exercices prévus ---- */

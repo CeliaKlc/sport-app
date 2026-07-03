@@ -218,6 +218,18 @@ svg{display:block;width:100%;height:auto}
 .mcell .dot{width:5px;height:5px;border-radius:99px}
 .mcell .dot.done{width:8px;height:8px}
 
+/* ===== Coach ===== */
+.coach-q{font-size:14px;font-weight:700;margin:16px 0 6px}
+.coach-q:first-child{margin-top:0}
+.coach-q small{color:var(--muted);font-weight:400}
+#coach-generate{margin-top:18px}
+.coach-day-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.coach-day ul{list-style:none}
+.coach-day li{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid #232837;font-size:14px}
+.coach-day li:last-child{border-bottom:none}
+.coach-day li small{color:var(--muted);white-space:nowrap}
+#coach-apply{margin-top:4px}
+
 /* ===== Profil / réglages ===== */
 .profile-switch{display:flex;gap:10px}
 .pswitch{flex:1;background:var(--card);border:2px solid transparent;border-radius:var(--radius);padding:14px;color:var(--text);font-weight:700;font-size:16px}

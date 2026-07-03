@@ -108,7 +108,8 @@ const Store = {
       semaineType: { celia: {}, jeremy: {} },
       exosPerso: { celia: [], jeremy: [] },
       tagsPerso: { celia: [], jeremy: [] },
-      programme: { celia: {}, jeremy: {} }   // exercices prévus par jour
+      programme: { celia: {}, jeremy: {} },  // exercices prévus par jour
+      coach: { celia: null, jeremy: null }   // réponses au questionnaire Coach
     };
   },
 
@@ -119,7 +120,7 @@ const Store = {
     this.data = Object.assign(def, saved || {});
     // fusionne les sous-objets pour ne jamais perdre un profil manquant
     const def2 = this.defaults();
-    for (const k of ["profils", "planning", "semaineType", "exosPerso", "tagsPerso", "programme"]) {
+    for (const k of ["profils", "planning", "semaineType", "exosPerso", "tagsPerso", "programme", "coach"]) {
       this.data[k] = Object.assign({}, def2[k], this.data[k] || {});
     }
     this.current = localStorage.getItem(this.PROFILE_KEY) || null;

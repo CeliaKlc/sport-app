@@ -1,5 +1,5 @@
 /* Service worker : met l'app en cache pour qu'elle fonctionne sans réseau à la salle. */
-const CACHE = "sportapp-v8";
+const CACHE = "sportapp-v9";
 const ASSETS = [
   ".",
   "index.html",
@@ -11,6 +11,7 @@ const ASSETS = [
   "js/chrono.js",
   "js/stats.js",
   "js/planning.js",
+  "js/coach.js",
   "js/profil.js",
   "js/app.js",
   "manifest.webmanifest",

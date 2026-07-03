@@ -38,7 +38,7 @@ function fmtDateFull(iso) { const d = isoToDate(iso); return `${JOURS[(d.getDay(
 
 /* --- navigation entre vues --- */
 const UI = {
-  TITLES: { stats: "Stats", chrono: "Chrono", planning: "Planning", profil: "Profil" },
+  TITLES: { stats: "Stats", chrono: "Chrono", planning: "Planning", coach: "Coach", profil: "Profil" },
   current: "stats",
 
   show(name) {
@@ -49,6 +49,7 @@ const UI = {
     $("#view-title").textContent = this.TITLES[name];
     if (name === "stats") Stats.render();
     if (name === "planning") Planning.render();
+    if (name === "coach") Coach.render();
     if (name === "profil") Profil.render();
     window.scrollTo(0, 0);
   },
