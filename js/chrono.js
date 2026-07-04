@@ -8,6 +8,8 @@ const Chrono = {
   vibrated: false,   // vibration déjà déclenchée pour la pause en cours
   wantWake: false,
   wakeLock: null,
+  audioCtx: null,
+  soundOn: localStorage.getItem("sportapp-son") !== "0",
 
   init() {
     $("#btn-start").onclick = () => this.start();
@@ -15,6 +17,13 @@ const Chrono = {
     $("#btn-resume").onclick = () => this.resume();
     $("#btn-stop").onclick = () => this.stop();
     $("#btn-wakelock").onclick = () => this.toggleWake();
+    $("#btn-sound").classList.toggle("on", this.soundOn);
+    $("#btn-sound").onclick = () => {
+      this.soundOn = !this.soundOn;
+      localStorage.setItem("sportapp-son", this.soundOn ? "1" : "0");
+      $("#btn-sound").classList.toggle("on", this.soundOn);
+      if (this.soundOn) { this.unlockAudio(); this.beep("green"); } // aperçu du son
+    };
     $("#btn-add-serie").onclick = () => this.addSerie();
     $("#exo-select").onchange = () => {
       $("#exo-custom").classList.toggle("hidden", $("#exo-select").value !== "__autre");
@@ -75,14 +84,42 @@ const Chrono = {
     };
   },
 
+  /* ---- son : bips générés (Web Audio), débloqués par le premier tap ---- */
+  unlockAudio() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    if (!this.audioCtx) this.audioCtx = new AC();
+    if (this.audioCtx.state === "suspended") this.audioCtx.resume();
+  },
+
+  beep(kind) {
+    if (!this.soundOn || !this.audioCtx || this.audioCtx.state !== "running") return;
+    const ctx = this.audioCtx, t0 = ctx.currentTime;
+    // vert : double bip clair et montant · orange (trop long) : bip grave insistant
+    const notes = kind === "green" ? [[880, 0, .15], [1175, .22, .25]] : [[330, 0, .25], [330, .35, .25], [330, .7, .4]];
+    for (const [freq, delai, duree] of notes) {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = "sine";
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, t0 + delai);
+      g.gain.exponentialRampToValueAtTime(0.4, t0 + delai + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + delai + duree);
+      o.connect(g).connect(ctx.destination);
+      o.start(t0 + delai);
+      o.stop(t0 + delai + duree + 0.05);
+    }
+  },
+
   /* ---- actions ---- */
   start() {
+    this.unlockAudio(); // le tap « Démarrer » autorise le son pour toute la séance (règle iOS)
     this.st = { profil: Store.current, state: "active", events: [{ t: Date.now(), type: "active" }], series: [] };
     this.persist();
     this.showRunning();
   },
 
   lap() {
+    this.unlockAudio();
     // mémorise l'exercice qui vient d'être travaillé : son type fixe le repos conseillé
     const exoVal = $("#exo-select").value;
     this.st.pauseExo = exoVal === "__autre" ? null : exoVal;
@@ -97,6 +134,7 @@ const Chrono = {
   },
 
   resume() {
+    this.unlockAudio();
     this.st.events.push({ t: Date.now(), type: "active" });
     this.st.state = "active";
     this.persist();
@@ -163,12 +201,14 @@ const Chrono = {
       if (!this.vibratedOver) {
         this.vibratedOver = true;
         $("#ch-pause-info").innerHTML = "Ça fait long — reprends avant de refroidir ! 🥶";
+        this.beep("over");
         if (navigator.vibrate) navigator.vibrate([80, 60, 80, 60, 80]);
       }
     } else if (t.seg >= seuil) {
       panel.classList.add("mode-pause-green");
       if (!this.vibrated) {
         this.vibrated = true;
+        this.beep("green");
         if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
       }
     } else {
