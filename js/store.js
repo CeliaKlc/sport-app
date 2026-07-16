@@ -198,5 +198,38 @@ const Store = {
   addExoPerso(nom) {
     const list = this.data.exosPerso[this.current];
     if (!list.includes(nom)) { list.push(nom); this.save(); }
+  },
+
+  /* renomme un exercice partout : bibliothèque perso, séances passées,
+     programmes du planning et mode de charge mémorisé */
+  renameExo(ancien, nouveau, profil) {
+    profil = profil || this.current;
+    const perso = this.data.exosPerso[profil];
+    const idx = perso.indexOf(ancien);
+    const dejaConnu = perso.includes(nouveau) || Object.values(EXOS).some(l => l.includes(nouveau));
+    if (idx >= 0) { if (dejaConnu) perso.splice(idx, 1); else perso[idx] = nouveau; }
+
+    this.data.seances.filter(s => s.profil === profil).forEach(s => {
+      (s.exercices || []).forEach(e => { if (e.nom === ancien) e.nom = nouveau; });
+      // fusionne si le nouveau nom existait déjà dans la même séance
+      const map = {}, ordre = [];
+      (s.exercices || []).forEach(e => {
+        if (!map[e.nom]) { map[e.nom] = e; ordre.push(e.nom); }
+        else map[e.nom].series.push(...e.series);
+      });
+      s.exercices = ordre.map(n => map[n]);
+    });
+
+    const prog = this.data.programme[profil] || {};
+    for (const iso of Object.keys(prog)) {
+      prog[iso] = prog[iso].map(n => (n === ancien ? nouveau : n)).filter((n, i, a) => a.indexOf(n) === i);
+    }
+
+    const meta = this.data.exoMeta[profil] || {};
+    if (meta[ancien]) {
+      if (!meta[nouveau]) meta[nouveau] = meta[ancien];
+      delete meta[ancien];
+    }
+    this.save();
   }
 };

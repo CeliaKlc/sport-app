@@ -73,8 +73,9 @@ const Profil = {
     const perso = Store.data.exosPerso[Store.current] || [];
     $("#perso-exos").innerHTML = perso.length
       ? `<div class="chip-list">${perso.map((e, i) =>
-          `<span class="chip chip-exo">${esc(e)}<button data-rmexo="${i}">✕</button></span>`).join("")}</div>
-        <p class="hint">Supprimer un exercice le retire de la bibliothèque — tes séances passées le gardent.</p>`
+          `<span class="chip chip-exo">${esc(e)}<button data-renexo="${i}" title="Renommer">✏️</button><button data-rmexo="${i}" title="Supprimer">✕</button></span>`).join("")}</div>
+        <p class="hint">✏️ renomme partout (historique, records, programmes compris) — pratique pour corriger une faute de frappe.
+        ✕ retire l'exercice de la bibliothèque, tes séances passées le gardent.</p>`
       : `<p class="hint">Les exercices que tu crées via «&nbsp;➕ Autre exercice…&nbsp;» dans le carnet apparaîtront ici.</p>`;
     $$("#perso-exos [data-rmexo]").forEach(b => b.onclick = () => {
       const i = Number(b.dataset.rmexo);
@@ -84,6 +85,35 @@ const Profil = {
         this.renderPersoExos();
       }
     });
+    $$("#perso-exos [data-renexo]").forEach(b => b.onclick = () => this.renameExo(Number(b.dataset.renexo)));
+  },
+
+  renameExo(i) {
+    const perso = Store.data.exosPerso[Store.current] || [];
+    const ancien = perso[i];
+    if (!ancien) return;
+    const { el, close } = openModal(`
+      <h3>Renommer l'exercice</h3>
+      <input id="ren-input" class="input" value="${esc(ancien)}">
+      <button id="ren-ok" class="btn btn-accent">💾 Renommer partout</button>
+      <p class="hint">Le nouveau nom sera appliqué partout : bibliothèque, historique de séances,
+      records, progression et exercices prévus au planning.</p>
+    `);
+    const input = el.querySelector("#ren-input");
+    input.focus();
+    input.select();
+    el.querySelector("#ren-ok").onclick = () => {
+      const nouveau = input.value.trim();
+      if (!nouveau || nouveau === ancien) { close(); return; }
+      Store.renameExo(ancien, nouveau);
+      // séance en cours : renomme aussi les séries déjà notées
+      if (typeof Chrono !== "undefined" && Chrono.st) {
+        Chrono.st.series.forEach(s => { if (s.exo === ancien) s.exo = nouveau; });
+        Chrono.persist();
+      }
+      close();
+      refreshAll();
+    };
   },
 
   saveSettings() {
