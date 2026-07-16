@@ -134,6 +134,12 @@ select.input{
 .chrono-sums strong{font-size:17px;font-variant-numeric:tabular-nums}
 .chrono-btns{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
 
+.chip-sm{padding:5px 10px;font-size:12px}
+.exo-mode{margin:2px 0}
+.edit-row{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.edit-nom{flex:1;font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.edit-row .input{width:72px;flex:none;padding:9px 8px;text-align:center}
+.edit-unit{color:var(--muted);font-size:13px}
 .exo-hint{background:var(--card2);border-radius:10px;padding:9px 12px;font-size:13px;color:var(--muted);margin-top:8px;line-height:1.55}
 .exo-hint strong{color:var(--text)}
 

@@ -112,9 +112,11 @@
         <div class="exo-form">
           <select id="exo-select" class="input"></select>
           <input id="exo-custom" class="input hidden" placeholder="Nom de l'exercice">
+          <div class="chip-list exo-mode" id="exo-mode"></div>
           <div class="exo-row">
             <input id="exo-charge" class="input" type="number" inputmode="decimal" step="0.5" min="0" placeholder="kg">
             <input id="exo-reps" class="input" type="number" inputmode="numeric" min="1" placeholder="reps">
+            <input id="exo-sec" class="input hidden" type="number" inputmode="numeric" min="1" placeholder="secondes">
             <button id="btn-add-serie" class="btn btn-accent">＋</button>
           </div>
         </div>
@@ -179,6 +181,9 @@
       <p class="hint">MET ≈ 3,5 (effort léger) · 5 (modéré, valeur par défaut) · 6+ (intense).
       Calories = MET × poids × heures de temps actif.</p>
     </div>
+
+    <h2 class="section-title">Mes exercices personnalisés</h2>
+    <div class="card" id="perso-exos"></div>
 
     <h2 class="section-title">Sauvegarde en ligne (GitHub)</h2>
     <div class="card settings">

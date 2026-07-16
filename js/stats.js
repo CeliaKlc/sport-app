@@ -52,18 +52,21 @@ const Stats = {
   renderRecords(seances) {
     const best = {};
     seances.forEach(s => (s.exercices || []).forEach(e => e.series.forEach(x => {
-      const b = best[e.nom] = best[e.nom] || { charge: 0, reps: 0, date: s.date };
-      if ((x.charge || 0) > b.charge) { b.charge = x.charge; b.date = s.date; }
-      // au poids du corps (pompes, gainage…) : record en répétitions
-      if (!b.charge && (x.reps || 0) > b.reps) { b.reps = x.reps; b.date = s.date; }
+      const b = best[e.nom] = best[e.nom] || { charge: 0, reps: 0, sec: 0, dc: s.date, ds: s.date, dr: s.date };
+      if ((x.charge || 0) > b.charge) { b.charge = x.charge; b.dc = s.date; }
+      if ((x.sec || 0) > b.sec) { b.sec = x.sec; b.ds = s.date; }
+      if (!(x.charge > 0) && (x.reps || 0) > b.reps) { b.reps = x.reps; b.dr = s.date; }
     })));
+    // priorité d'affichage : charge (kg) > durée (s) > répétitions
     const rows = Object.entries(best)
-      .filter(([, r]) => r.charge > 0 || r.reps > 0)
-      .sort((a, b) => (b[1].charge - a[1].charge) || (b[1].reps - a[1].reps));
+      .filter(([, r]) => r.charge > 0 || r.sec > 0 || r.reps > 0)
+      .sort((a, b) => (b[1].charge - a[1].charge) || (b[1].sec - a[1].sec) || (b[1].reps - a[1].reps));
     $("#stats-records").innerHTML = rows.length
-      ? rows.map(([nom, r]) => `<div class="record-row"><span>${esc(nom)}</span>
-          <strong>${r.charge ? r.charge + " kg" : "× " + r.reps + " reps"}</strong>
-          <small>${esc(fmtDateFR(r.date))}</small></div>`).join("")
+      ? rows.map(([nom, r]) => {
+          const val = r.charge ? [r.charge + " kg", r.dc] : r.sec ? [r.sec + " s", r.ds] : ["× " + r.reps + " reps", r.dr];
+          return `<div class="record-row"><span>${esc(nom)}</span>
+            <strong>${val[0]}</strong><small>${esc(fmtDateFR(val[1]))}</small></div>`;
+        }).join("")
       : `<div class="chart-empty">Tes records apparaîtront ici dès que tu noteras tes charges 🏆</div>`;
   },
 
@@ -129,13 +132,18 @@ const Stats = {
   },
 
   renderExoProgress(seances) {
-    // charge max par exercice et par séance, en ordre chronologique
+    // charge (ou durée) max par exercice et par séance, en ordre chronologique
     const byExo = {};
     seances.slice().reverse().forEach(s => {
       (s.exercices || []).forEach(e => {
         const maxCharge = Math.max(...e.series.map(x => x.charge || 0), 0);
+        const maxSec = Math.max(...e.series.map(x => x.sec || 0), 0);
         if (maxCharge > 0) {
-          (byExo[e.nom] = byExo[e.nom] || []).push({ label: fmtDateFR(s.date), value: maxCharge });
+          const b = byExo[e.nom] = byExo[e.nom] || { unit: "kg", points: [] };
+          if (b.unit === "kg") b.points.push({ label: fmtDateFR(s.date), value: maxCharge });
+        } else if (maxSec > 0) {
+          const b = byExo[e.nom] = byExo[e.nom] || { unit: "s", points: [] };
+          if (b.unit === "s") b.points.push({ label: fmtDateFR(s.date), value: maxSec });
         }
       });
     });
@@ -153,11 +161,12 @@ const Stats = {
     sel.innerHTML = exos.map(e => `<option value="${esc(e)}"${e === this.selectedExo ? " selected" : ""}>${esc(e)}</option>`).join("");
     sel.onchange = () => { this.selectedExo = sel.value; this.renderExoProgress(seances); };
 
-    const points = byExo[this.selectedExo].slice(-10); // les 10 dernières séances
-    const pr = Math.max(...byExo[this.selectedExo].map(p => p.value));
+    const exoData = byExo[this.selectedExo];
+    const points = exoData.points.slice(-10); // les 10 dernières séances
+    const pr = Math.max(...exoData.points.map(p => p.value));
     $("#stats-exo-chart").innerHTML =
       svgLine(points, { unit: "" }) +
-      `<div class="pr-line">🏆 Record personnel : <strong>${pr} kg</strong></div>`;
+      `<div class="pr-line">🏆 Record personnel : <strong>${pr} ${exoData.unit}</strong></div>`;
   },
 
   renderHistory(seances) {
@@ -169,7 +178,7 @@ const Stats = {
     $("#stats-history").innerHTML = seances.slice(0, 30).map(s => {
       const detail = (s.exercices || []).map(e =>
         `<div>• ${esc(e.nom)} : ${e.series.map(x =>
-          [x.charge ? x.charge + " kg" : "—", x.reps ? "× " + x.reps : ""].join(" ").trim()
+          x.sec ? x.sec + " s" : [x.charge ? x.charge + " kg" : "—", x.reps ? "× " + x.reps : ""].join(" ").trim()
         ).join(" · ")}</div>`).join("");
       return `
       <div class="hist-item" data-id="${s.id}">
@@ -185,6 +194,7 @@ const Stats = {
         ${detail ? `<div class="hist-detail hidden">${detail}</div>` : ""}
         <div class="hist-actions">
           ${detail ? `<button class="btn btn-outline btn-small" data-toggle>Détails</button>` : ""}
+          ${detail ? `<button class="btn btn-outline btn-small" data-edit>✏️ Modifier</button>` : ""}
           <button class="btn btn-outline btn-small" data-delete>🗑</button>
         </div>
       </div>`;
@@ -199,5 +209,58 @@ const Stats = {
         this.render();
       }
     });
+    $$("#stats-history [data-edit]").forEach(b => b.onclick = () => {
+      this.editSeance(b.closest(".hist-item").dataset.id);
+    });
+  },
+
+  /* ---- édition d'une séance enregistrée : modifier ou supprimer les séries ---- */
+  editSeance(id) {
+    const s = Store.data.seances.find(x => x.id === id);
+    if (!s) return;
+    const rows = [];
+    (s.exercices || []).forEach(e => e.series.forEach(x => rows.push({ nom: e.nom, x })));
+
+    const { el, close } = openModal(`
+      <h3>Modifier — ${esc(fmtDateFull(s.date))}</h3>
+      <div id="edit-rows">${rows.map((r, i) => `
+        <div class="edit-row" data-i="${i}">
+          <span class="edit-nom">${esc(r.nom)}</span>
+          ${r.x.sec != null
+            ? `<input class="input" type="number" min="0" data-f="sec" value="${r.x.sec}" placeholder="s"><span class="edit-unit">s</span>`
+            : `<input class="input" type="number" step="0.5" min="0" data-f="charge" value="${r.x.charge || ""}" placeholder="kg">
+               <input class="input" type="number" min="0" data-f="reps" value="${r.x.reps || ""}" placeholder="reps">`}
+          <button class="chip" data-del="${i}">✕</button>
+        </div>`).join("")}</div>
+      <p class="hint">✕ supprime une série. Un exercice sans série restante disparaît de la séance.</p>
+      <button id="edit-save" class="btn btn-accent">💾 Enregistrer les modifications</button>
+    `);
+
+    const supprimees = new Set();
+    el.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
+      supprimees.add(Number(b.dataset.del));
+      b.closest(".edit-row").style.display = "none";
+    });
+
+    el.querySelector("#edit-save").onclick = () => {
+      const map = {}, ordre = [];
+      el.querySelectorAll(".edit-row").forEach(row => {
+        const i = Number(row.dataset.i);
+        if (supprimees.has(i)) return;
+        const serie = {};
+        row.querySelectorAll("input").forEach(inp => {
+          const v = parseFloat(inp.value);
+          serie[inp.dataset.f] = isNaN(v) || v < 0 ? 0 : v;
+        });
+        if (serie.sec != null ? serie.sec <= 0 : (!serie.charge && !serie.reps)) return; // série vidée = supprimée
+        const nom = rows[i].nom;
+        if (!map[nom]) { map[nom] = { nom, series: [] }; ordre.push(nom); }
+        map[nom].series.push(serie);
+      });
+      s.exercices = ordre.map(n => map[n]);
+      Store.save();
+      close();
+      this.render();
+    };
   }
 };

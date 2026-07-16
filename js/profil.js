@@ -66,6 +66,24 @@ const Profil = {
     $("#set-met").value = p.met;
     $("#set-ghtoken").value = Cloud.token();
     this.renderCloudStatus();
+    this.renderPersoExos();
+  },
+
+  renderPersoExos() {
+    const perso = Store.data.exosPerso[Store.current] || [];
+    $("#perso-exos").innerHTML = perso.length
+      ? `<div class="chip-list">${perso.map((e, i) =>
+          `<span class="chip chip-exo">${esc(e)}<button data-rmexo="${i}">✕</button></span>`).join("")}</div>
+        <p class="hint">Supprimer un exercice le retire de la bibliothèque — tes séances passées le gardent.</p>`
+      : `<p class="hint">Les exercices que tu crées via «&nbsp;➕ Autre exercice…&nbsp;» dans le carnet apparaîtront ici.</p>`;
+    $$("#perso-exos [data-rmexo]").forEach(b => b.onclick = () => {
+      const i = Number(b.dataset.rmexo);
+      if (confirm(`Supprimer « ${perso[i]} » de ta bibliothèque ?`)) {
+        perso.splice(i, 1);
+        Store.save();
+        this.renderPersoExos();
+      }
+    });
   },
 
   saveSettings() {

@@ -27,6 +27,7 @@ const Chrono = {
     $("#btn-add-serie").onclick = () => this.addSerie();
     $("#exo-select").onchange = () => {
       $("#exo-custom").classList.toggle("hidden", $("#exo-select").value !== "__autre");
+      this.renderModeChips();
       this.updateHint(true);
     };
     // ré-acquiert le wake lock quand on revient sur l'app
@@ -152,6 +153,7 @@ const Chrono = {
     $("#chrono-idle").classList.add("hidden");
     $("#chrono-run").classList.remove("hidden");
     this.fillExoSelect();
+    this.renderModeChips();
     this.updateHint(false);
     this.renderLog();
     this.updateButtons();
@@ -232,6 +234,28 @@ const Chrono = {
     if (prog.length) sel.value = prog[0];
   },
 
+  /* ---- mode de charge (libre / machine / corps / temps) ---- */
+  renderModeChips() {
+    const wrap = $("#exo-mode");
+    const exo = $("#exo-select").value;
+    if (exo === "__autre") { wrap.innerHTML = ""; this.applyModeInputs("libre"); return; }
+    const cur = exoMode(exo, this.st.profil);
+    wrap.innerHTML = EXO_MODES.map(([v, l]) =>
+      `<button class="chip chip-sm${cur === v ? " on" : ""}" data-mode="${v}">${l}</button>`).join("");
+    wrap.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => {
+      setExoMode(exo, b.dataset.mode, this.st.profil);
+      this.renderModeChips();
+      this.updateHint(true);
+    });
+    this.applyModeInputs(cur);
+  },
+
+  applyModeInputs(mode) {
+    $("#exo-charge").classList.toggle("hidden", mode === "corps" || mode === "temps");
+    $("#exo-reps").classList.toggle("hidden", mode === "temps");
+    $("#exo-sec").classList.toggle("hidden", mode !== "temps");
+  },
+
   addSerie() {
     let exo = $("#exo-select").value;
     if (exo === "__autre") {
@@ -242,13 +266,27 @@ const Chrono = {
       $("#exo-select").value = exo;
       $("#exo-custom").value = "";
       $("#exo-custom").classList.add("hidden");
+      this.renderModeChips();
     }
-    const charge = parseFloat($("#exo-charge").value) || 0;
-    const reps = parseInt($("#exo-reps").value, 10) || 0;
-    this.st.series.push({ exo, charge, reps });
+    const mode = exoMode(exo, this.st.profil);
+    if (mode === "temps") {
+      const sec = parseInt($("#exo-sec").value, 10) || 0;
+      if (sec <= 0) { $("#exo-sec").focus(); return; }
+      this.st.series.push({ exo, sec });
+      $("#exo-sec").value = "";
+    } else if (mode === "corps") {
+      const reps = parseInt($("#exo-reps").value, 10) || 0;
+      if (reps <= 0) { $("#exo-reps").focus(); return; }
+      this.st.series.push({ exo, reps });
+      $("#exo-reps").value = "";
+    } else {
+      const charge = parseFloat($("#exo-charge").value) || 0;
+      const reps = parseInt($("#exo-reps").value, 10) || 0;
+      this.st.series.push({ exo, charge, reps });
+      $("#exo-reps").value = "";
+    }
     this.persist();
     this.renderLog();
-    $("#exo-reps").value = "";
     if (navigator.vibrate) navigator.vibrate(40);
   },
 
@@ -256,7 +294,9 @@ const Chrono = {
     const list = this.st.series.slice().reverse();
     $("#exo-log").innerHTML = list.map((s, i) => {
       const realIdx = this.st.series.length - 1 - i;
-      const detail = [s.charge ? s.charge + " kg" : null, s.reps ? "× " + s.reps : null].filter(Boolean).join(" ");
+      const detail = s.sec
+        ? s.sec + " s"
+        : [s.charge ? s.charge + " kg" : null, s.reps ? "× " + s.reps : null].filter(Boolean).join(" ");
       return `<li><span>${esc(s.exo)} <small>${esc(detail)}</small></span>
         <button class="chip" data-del="${realIdx}">✕</button></li>`;
     }).join("");
@@ -282,28 +322,51 @@ const Chrono = {
     if (exo === "__autre") { hint.classList.add("hidden"); return; }
     const last = this.lastPerf(exo);
     if (!last || !last.series.length) { hint.classList.add("hidden"); return; }
-    // meilleure série de la dernière fois : charge max, puis reps max
-    const best = last.series.reduce((a, b) =>
-      ((b.charge || 0) > (a.charge || 0) ||
-       ((b.charge || 0) === (a.charge || 0) && (b.reps || 0) > (a.reps || 0))) ? b : a);
-    const fmtS = x => [x.charge ? x.charge + " kg" : null, x.reps ? "× " + x.reps : null].filter(Boolean).join(" ") || "—";
-    // double progression, plage 8-12 : on monte les reps jusqu'à 12, puis la charge
-    // (petit incrément en isolation, +2,5 kg en polyarticulaire) et retour à 8 reps
+    const mode = exoMode(exo, this.st.profil);
+    const fmtS = x => x.sec
+      ? x.sec + " s"
+      : ([x.charge ? x.charge + " kg" : null, x.reps ? "× " + x.reps : null].filter(Boolean).join(" ") || "—");
+
     let sugg = null;
-    if (!best.charge) { if (best.reps) sugg = "essaie × " + (best.reps + 1); }
-    else if ((best.reps || 0) >= 12) sugg = "essaie " + (best.charge + (exoIsIso(exo) ? 1 : 2.5)) + " kg × 8";
-    else sugg = "essaie " + best.charge + " kg × " + ((best.reps || 0) + 1) + " (objectif 12)";
+    if (mode === "temps") {
+      const bestSec = Math.max(...last.series.map(x => x.sec || 0), 0);
+      if (bestSec > 0) {
+        sugg = "essaie de tenir " + (bestSec + 10) + " s";
+        if (prefill || !$("#exo-sec").value) $("#exo-sec").value = bestSec;
+      }
+    } else {
+      // meilleure série de la dernière fois : charge max, puis reps max
+      const best = last.series.reduce((a, b) =>
+        ((b.charge || 0) > (a.charge || 0) ||
+         ((b.charge || 0) === (a.charge || 0) && (b.reps || 0) > (a.reps || 0))) ? b : a);
+      // double progression, plage 8-12 : on monte les reps jusqu'à 12, puis la charge
+      if (!best.charge) {
+        if (best.reps) sugg = "essaie × " + (best.reps + 1);
+      } else if ((best.reps || 0) >= 12) {
+        if (mode === "machine") {
+          // le cran de la machine est déduit des charges déjà utilisées
+          const cran = machineStep(exo, this.st.profil);
+          sugg = cran
+            ? "essaie " + (+(best.charge + cran).toFixed(1)) + " kg × 8 (cran machine +" + cran + ")"
+            : "monte d'un cran sur la machine et reviens à 8 reps";
+        } else {
+          sugg = "essaie " + (best.charge + (exoIsIso(exo) ? 1 : 2.5)) + " kg × 8";
+        }
+      } else {
+        sugg = "essaie " + best.charge + " kg × " + ((best.reps || 0) + 1) + " (objectif 12)";
+      }
+      if (best.charge && (prefill || !$("#exo-charge").value)) $("#exo-charge").value = best.charge;
+    }
     hint.innerHTML = `Dernière fois (${esc(fmtDateFR(last.date))}) : ${last.series.map(fmtS).map(esc).join(" · ")}` +
       (sugg ? `<br>💡 <strong>${esc(sugg)}</strong>` : "");
     hint.classList.remove("hidden");
-    if (best.charge && (prefill || !$("#exo-charge").value)) $("#exo-charge").value = best.charge;
   },
 
   groupSeries() {
     const map = {}, order = [];
     for (const s of this.st.series) {
       if (!map[s.exo]) { map[s.exo] = { nom: s.exo, series: [] }; order.push(s.exo); }
-      map[s.exo].series.push({ charge: s.charge, reps: s.reps });
+      map[s.exo].series.push(s.sec != null ? { sec: s.sec } : { charge: s.charge || 0, reps: s.reps || 0 });
     }
     return order.map(k => map[k]);
   },
@@ -395,20 +458,25 @@ const Chrono = {
     for (const ex of exercices) {
       const curCharge = Math.max(...ex.series.map(x => x.charge || 0), 0);
       const curReps = Math.max(...ex.series.map(x => x.reps || 0), 0);
-      let prevCharge = 0, prevReps = 0;
+      const curSec = Math.max(...ex.series.map(x => x.sec || 0), 0);
+      let prevCharge = 0, prevReps = 0, prevSec = 0;
       Store.data.seances
         .filter(s => s.profil === this.st.profil)
         .forEach(s => (s.exercices || []).forEach(e => {
           if (e.nom === ex.nom) e.series.forEach(x => {
             prevCharge = Math.max(prevCharge, x.charge || 0);
+            prevSec = Math.max(prevSec, x.sec || 0);
             if (!(x.charge > 0)) prevReps = Math.max(prevReps, x.reps || 0);
           });
         }));
       // on ne fête que les records battus, pas la première saisie d'un exercice
       if (curCharge > 0) {
         if (prevCharge > 0 && curCharge > prevCharge) records.push({ nom: ex.nom, charge: curCharge, ancien: prevCharge });
+      } else if (curSec > 0) {
+        // exercice en durée (gainage…) : le record se mesure en secondes
+        if (prevSec > 0 && curSec > prevSec) records.push({ nom: ex.nom, sec: curSec, ancienSec: prevSec });
       } else if (curReps > 0 && prevReps > 0 && curReps > prevReps) {
-        // exercice au poids du corps (pompes, gainage…) : le record se mesure en répétitions
+        // exercice au poids du corps (pompes…) : le record se mesure en répétitions
         records.push({ nom: ex.nom, reps: curReps, ancienReps: prevReps });
       }
     }
@@ -421,8 +489,8 @@ const Chrono = {
       <h3 style="text-align:center">Record${records.length > 1 ? "s" : ""} battu${records.length > 1 ? "s" : ""} !</h3>
       <div>${records.map(r => `
         <div class="record-row"><span>${esc(r.nom)}</span>
-        <strong>${r.charge ? r.charge + " kg" : "× " + r.reps}</strong>
-        <small>avant : ${r.charge ? r.ancien + " kg" : "× " + r.ancienReps}</small></div>`).join("")}</div>
+        <strong>${r.charge ? r.charge + " kg" : r.sec ? r.sec + " s" : "× " + r.reps}</strong>
+        <small>avant : ${r.charge ? r.ancien + " kg" : r.sec ? r.ancienSec + " s" : "× " + r.ancienReps}</small></div>`).join("")}</div>
       <button class="btn btn-accent" id="celebrate-ok">Trop fort·e 💪</button>
     `);
     if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 300]);

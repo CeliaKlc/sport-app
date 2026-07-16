@@ -90,6 +90,47 @@ const EXOS_ISO = [
 ];
 function exoIsIso(nom) { return EXOS_ISO.includes(nom); }
 
+/* ---- mode de charge par exercice : libre / machine / corps (reps) / temps (secondes) ---- */
+const EXO_MODES = [["libre", "Libre"], ["machine", "Machine"], ["corps", "Poids du corps"], ["temps", "Temps"]];
+
+function exoDefaultMode(nom) {
+  if (nom === "Gainage") return "temps";
+  if (["Pompes", "Crunch", "Relevés de jambes", "Dips", "Extension lombaires (banc)"].includes(nom)) return "corps";
+  const machine = ["(machine)", "poulie", "Presse à cuisses", "Leg extension", "Leg curl", "Tirage vertical", "Tirage horizontal"];
+  if (machine.some(h => nom.includes(h))) return "machine";
+  return "libre";
+}
+
+function exoMode(nom, profil) {
+  const meta = Store.data.exoMeta[profil || Store.current] || {};
+  return (meta[nom] && meta[nom].mode) || exoDefaultMode(nom);
+}
+
+function setExoMode(nom, mode, profil) {
+  const all = Store.data.exoMeta[profil || Store.current];
+  (all[nom] = all[nom] || {}).mode = mode;
+  Store.save();
+}
+
+/* cran d'une machine appris depuis l'historique : l'écart le plus fréquent
+   entre les charges déjà utilisées (ex : 45 → 52 → 59 = crans de 7 kg) */
+function machineStep(nom, profil) {
+  const charges = new Set();
+  Store.data.seances
+    .filter(s => s.profil === (profil || Store.current))
+    .forEach(s => (s.exercices || []).forEach(e => {
+      if (e.nom === nom) e.series.forEach(x => { if (x.charge > 0) charges.add(x.charge); });
+    }));
+  const arr = Array.from(charges).sort((a, b) => a - b);
+  const gaps = {};
+  for (let i = 1; i < arr.length; i++) {
+    const g = +(arr[i] - arr[i - 1]).toFixed(1);
+    if (g > 0) gaps[g] = (gaps[g] || 0) + 1;
+  }
+  const best = Object.entries(gaps).sort((a, b) => b[1] - a[1] || a[0] - b[0])[0];
+  return best ? parseFloat(best[0]) : null;
+}
+
 const Store = {
   KEY: "sportapp-data",
   PROFILE_KEY: "sportapp-profil",
@@ -109,7 +150,8 @@ const Store = {
       exosPerso: { celia: [], jeremy: [] },
       tagsPerso: { celia: [], jeremy: [] },
       programme: { celia: {}, jeremy: {} },  // exercices prévus par jour
-      coach: { celia: null, jeremy: null }   // réponses au questionnaire Coach
+      coach: { celia: null, jeremy: null },  // réponses au questionnaire Coach
+      exoMeta: { celia: {}, jeremy: {} }     // mode de charge choisi par exercice
     };
   },
 
@@ -120,7 +162,7 @@ const Store = {
     this.data = Object.assign(def, saved || {});
     // fusionne les sous-objets pour ne jamais perdre un profil manquant
     const def2 = this.defaults();
-    for (const k of ["profils", "planning", "semaineType", "exosPerso", "tagsPerso", "programme", "coach"]) {
+    for (const k of ["profils", "planning", "semaineType", "exosPerso", "tagsPerso", "programme", "coach", "exoMeta"]) {
       this.data[k] = Object.assign({}, def2[k], this.data[k] || {});
     }
     this.current = localStorage.getItem(this.PROFILE_KEY) || null;
