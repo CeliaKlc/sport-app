@@ -1,5 +1,5 @@
 /* Service worker : met l'app en cache pour qu'elle fonctionne sans réseau à la salle. */
-const CACHE = "sportapp-v12";
+const CACHE = "sportapp-v13";
 const ASSETS = [
   ".",
   "index.html",
@@ -31,15 +31,24 @@ self.addEventListener("activate", e => {
   );
 });
 
+/* Réseau d'abord (les mises à jour sont visibles dès la réouverture),
+   cache en secours (l'app fonctionne toujours hors-ligne à la salle). */
 self.addEventListener("fetch", e => {
   if (e.request.method !== "GET") return;
   if (!e.request.url.startsWith(self.location.origin)) return; // ne pas intercepter GitHub & co
   e.respondWith(
-    caches.match(e.request, { ignoreSearch: true }).then(hit =>
-      hit ||
-      fetch(e.request).catch(() =>
-        e.request.mode === "navigate" ? caches.match("index.html") : Response.error()
+    fetch(e.request)
+      .then(res => {
+        if (res.ok) {
+          const copie = res.clone();
+          caches.open(CACHE).then(c => c.put(e.request, copie));
+        }
+        return res;
+      })
+      .catch(() =>
+        caches.match(e.request, { ignoreSearch: true }).then(hit =>
+          hit || (e.request.mode === "navigate" ? caches.match("index.html") : Response.error())
+        )
       )
-    )
   );
 });
