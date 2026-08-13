@@ -188,8 +188,9 @@ const Stats = {
         </div>
         <div class="hist-meta">
           <span>⏱ ${fmtDuree(s.tempsActif)} actif / ${fmtDuree(s.dureeTotale)}</span>
+          ${s.tempsEchauffement ? `<span>🔥 ${fmtDuree(s.tempsEchauffement)} échauff.</span>` : ""}
           <span>🔁 ${s.nbSeries} série${s.nbSeries > 1 ? "s" : ""}</span>
-          <span>🔥 ${s.calories || 0} kcal</span>
+          <span>⚡ ${s.calories || 0} kcal</span>
         </div>
         ${detail ? `<div class="hist-detail hidden">${detail}</div>` : ""}
         <div class="hist-actions">

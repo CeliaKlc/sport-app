@@ -13,6 +13,7 @@ const Chrono = {
 
   init() {
     $("#btn-start").onclick = () => this.start();
+    $("#btn-go").onclick = () => this.beginActivity();
     $("#btn-lap").onclick = () => this.lap();
     $("#btn-resume").onclick = () => this.resume();
     $("#btn-stop").onclick = () => this.stop();
@@ -69,16 +70,17 @@ const Chrono = {
   /* ---- calculs sur les horodatages ---- */
   times(now) {
     const ev = this.st.events;
-    let act = 0, pau = 0;
+    let act = 0, pau = 0, warm = 0;
     const pauses = [];
     for (let i = 0; i < ev.length; i++) {
       const end = i + 1 < ev.length ? ev[i + 1].t : now;
       const dur = end - ev[i].t;
       if (ev[i].type === "active") act += dur;
+      else if (ev[i].type === "warmup") warm += dur;
       else { pau += dur; pauses.push(dur); }
     }
     return {
-      act, pau, pauses,
+      act, pau, warm, pauses,
       total: now - ev[0].t,
       seg: now - ev[ev.length - 1].t,
       nbSeries: ev.filter(e => e.type === "pause").length
@@ -114,9 +116,19 @@ const Chrono = {
   /* ---- actions ---- */
   start() {
     this.unlockAudio(); // le tap « Démarrer » autorise le son pour toute la séance (règle iOS)
-    this.st = { profil: Store.current, state: "active", events: [{ t: Date.now(), type: "active" }], series: [] };
+    // la séance commence par l'échauffement : compté à part, hors temps actif
+    this.st = { profil: Store.current, state: "warmup", events: [{ t: Date.now(), type: "warmup" }], series: [] };
     this.persist();
     this.showRunning();
+  },
+
+  beginActivity() {
+    this.unlockAudio();
+    this.st.events.push({ t: Date.now(), type: "active" });
+    this.st.state = "active";
+    this.persist();
+    this.updateButtons();
+    if (navigator.vibrate) navigator.vibrate(80);
   },
 
   lap() {
@@ -174,11 +186,17 @@ const Chrono = {
   },
 
   updateButtons() {
-    const pause = this.st.state === "pause";
-    $("#btn-lap").classList.toggle("hidden", pause);
-    $("#btn-resume").classList.toggle("hidden", !pause);
-    $("#ch-pause-info").classList.toggle("hidden", !pause);
-    $("#ch-mode").textContent = pause ? "PAUSE" : "ACTIVITÉ";
+    const st = this.st.state;
+    $("#btn-go").classList.toggle("hidden", st !== "warmup");
+    $("#btn-lap").classList.toggle("hidden", st !== "active");
+    $("#btn-resume").classList.toggle("hidden", st !== "pause");
+    $("#ch-pause-info").classList.toggle("hidden", st === "active");
+    $("#ch-mode").textContent = st === "warmup" ? "🔥 ÉCHAUFFEMENT" : st === "pause" ? "PAUSE" : "ACTIVITÉ";
+    if (st === "warmup") {
+      $("#ch-pause-info").innerHTML =
+        "Mobilité, cardio léger, séries légères… Ce temps ne compte pas dans ton temps actif. " +
+        "Profites-en pour consulter tes dernières perfs dans le carnet 👇";
+    }
   },
 
   tick() {
@@ -191,7 +209,11 @@ const Chrono = {
     $("#ch-series").textContent = Math.max(t.nbSeries, this.st.series.length);
 
     const panel = $("#ch-panel");
-    panel.classList.remove("mode-active", "mode-pause-red", "mode-pause-green", "mode-pause-over");
+    panel.classList.remove("mode-active", "mode-warmup", "mode-pause-red", "mode-pause-green", "mode-pause-over");
+    if (this.st.state === "warmup") {
+      panel.classList.add("mode-warmup");
+      return;
+    }
     if (this.st.state === "active") {
       panel.classList.add("mode-active");
       return;
@@ -392,6 +414,7 @@ const Chrono = {
       <h3>Séance terminée 💪</h3>
       <div class="recap-grid">
         <div class="stat-card"><div class="val">${fmtChrono(t.total)}</div><div class="lbl">Durée totale</div></div>
+        <div class="stat-card"><div class="val">${t.warm ? fmtChrono(t.warm) : "—"}</div><div class="lbl">Échauffement 🔥</div></div>
         <div class="stat-card"><div class="val">${fmtChrono(t.act)}</div><div class="lbl">Temps actif</div></div>
         <div class="stat-card"><div class="val">${fmtChrono(t.pau)}</div><div class="lbl">Temps de pause</div></div>
         <div class="stat-card"><div class="val">${t.nbSeries}</div><div class="lbl">Séries</div></div>
@@ -423,6 +446,7 @@ const Chrono = {
         date: dateISO,
         debut: this.st.events[0].t,
         dureeTotale: Math.round(t.total / 1000),
+        tempsEchauffement: Math.round(t.warm / 1000),
         tempsActif: Math.round(t.act / 1000),
         tempsPause: Math.round(t.pau / 1000),
         pauses: t.pauses.map(x => Math.round(x / 1000)),

@@ -123,6 +123,8 @@ select.input{
 .chrono-panel.mode-pause-green{background:#0f2b1a;box-shadow:inset 0 0 0 2px var(--green)}
 .chrono-panel.mode-pause-over{background:#33210b;box-shadow:inset 0 0 0 2px #f59e0b}
 .mode-pause-over .chrono-mode{color:#f59e0b}
+.chrono-panel.mode-warmup{background:linear-gradient(160deg,#2e1e0c,#1a1410);box-shadow:inset 0 0 0 2px #fb923c}
+.mode-warmup .chrono-mode{color:#fb923c}
 .chrono-mode{font-size:13px;letter-spacing:.2em;font-weight:800;color:var(--muted);margin-bottom:6px}
 .mode-pause-red .chrono-mode{color:var(--red)}
 .mode-pause-green .chrono-mode{color:var(--green)}
