@@ -36,6 +36,11 @@ window.addEventListener("DOMContentLoaded", () => {
   refreshAll();
   UI.show(Chrono.st ? "chrono" : "stats");
 
+  // sauvegarde en ligne automatique : à l'ouverture, au retour du réseau, et quand on quitte l'app
+  Cloud.autoSave();
+  window.addEventListener("online", () => Cloud.autoSave());
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") Cloud.autoSave(); });
+
   // demande au navigateur de ne jamais purger le stockage de lui-même
   if (navigator.storage && navigator.storage.persist) {
     navigator.storage.persist().catch(() => {});

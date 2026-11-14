@@ -18,11 +18,49 @@
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+<!-- Icônes dessinées (sprite SVG) : <svg class="ic"><use href="#i-nom"/></svg> -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M8 17v-5"/><path d="M13 17V7"/><path d="M18 17v-8"/></symbol>
+  <symbol id="i-timer" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2"/><path d="M10 2h4"/><path d="M19 6l-1.5 1.5"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="17" rx="3"/><path d="M8 2.5v4M16 2.5v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 17.5h.01M12 17.5h.01"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-coffee" viewBox="0 0 24 24"><path d="M17 9h1a3.5 3.5 0 0 1 0 7h-1"/><path d="M3 9h14v7a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5Z"/><path d="M7 2.5v3M11 2.5v3M15 2.5v3"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a2 2 0 0 0 3.4 0"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 22h4"/><path d="M15 14c.2-1 .7-1.7 1.5-2.5A5.5 5.5 0 0 0 18 8 6 6 0 0 0 6 8c0 1.4.4 2.4 1.5 3.5.8.8 1.3 1.5 1.5 2.5"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15a1 1 0 0 0 1.5.9l12-7.5a1 1 0 0 0 0-1.8l-12-7.5A1 1 0 0 0 7 4.5Z" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1.2" fill="currentColor" stroke="none"/><rect x="14" y="4" width="4" height="16" rx="1.2" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2.5" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 22V4"/><path d="M5 4c4-2.5 7 2.5 14 0v10c-7 2.5-10-2.5-14 0"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><rect x="8" y="2.5" width="8" height="4" rx="1"/><path d="M16 4.5h2a2 2 0 0 1 2 2V20a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6.5a2 2 0 0 1 2-2h2"/><path d="M12 11h4M12 16h4M8 11h.01M8 16h.01"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="10.5" width="16" height="11" rx="2.5"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></symbol>
+  <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 22c4 0 7-2.8 7-7 0-4.5-3.5-7-4.5-11-2 1.5-3.5 4-3.5 6.5C9.5 9.5 9 8.5 8.5 7 6.5 9 5 11.8 5 15c0 4.2 3 7 7 7Z"/><path d="M12 22c-1.7 0-3-1.3-3-3 0-1.8 1.5-3 3-5 1.5 2 3 3.2 3 5 0 1.7-1.3 3-3 3Z"/></symbol>
+  <symbol id="i-dumbbell" viewBox="0 0 24 24"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></symbol>
+  <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M8 4h8v6a4 4 0 0 1-8 0Z"/><path d="M8 6H4.5a3 3 0 0 0 3.5 4M16 6h3.5a3 3 0 0 1-3.5 4"/><path d="M12 14v4M8 21h8M9.5 18h5"/></symbol>
+  <symbol id="i-save" viewBox="0 0 24 24"><path d="M5 3h11l4 4v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 1-2Z"/><path d="M8 3v5h7V3M8 21v-6h8v6"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6"/><path d="M6 7l1 13a2 2 0 0 0 2 1.8h6a2 2 0 0 0 2-1.8L18 7M9 7V4.5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V7"/></symbol>
+  <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/><path d="M14.5 5.5l3 3"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.9 2.4 17.5A2 2 0 0 0 4.1 20.5h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4M12 17h.01"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4.5M12 8h.01"/></symbol>
+  <symbol id="i-repeat" viewBox="0 0 24 24"><path d="M17 2.5l3 3-3 3"/><path d="M4 11v-1a4.5 4.5 0 0 1 4.5-4.5H20M7 21.5l-3-3 3-3"/><path d="M20 13v1a4.5 4.5 0 0 1-4.5 4.5H4"/></symbol>
+  <symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7Z"/></symbol>
+  <symbol id="i-ruler" viewBox="0 0 24 24"><path d="M3 16.5 16.5 3 21 7.5 7.5 21Z"/><path d="M7 12.5l2 2M10 9.5l2 2M13 6.5l2 2"/></symbol>
+  <symbol id="i-rows" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="2"/><rect x="3" y="14" width="18" height="6" rx="2"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="13" height="13" rx="2.5"/><path d="M16 8V5.5A2.5 2.5 0 0 0 13.5 3h-8A2.5 2.5 0 0 0 3 5.5v8A2.5 2.5 0 0 0 5.5 16H8"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M17.5 19H8a5.5 5.5 0 1 1 1-10.9A6 6 0 0 1 20.3 11 4 4 0 0 1 17.5 19Z"/></symbol>
+</svg>
 
 <!-- Écran de verrouillage (code d'accès) -->
 <div id="lock-screen" class="lock-screen">
   <div id="lock-box" class="lock-box">
-    <span class="lock-emoji">🔒</span>
+    <span class="lock-emoji"><svg class="ic" aria-hidden="true"><use href="#i-lock"/></svg></span>
     <h1>Sport App</h1>
     <p class="lock-sub">Entre le code d'accès</p>
     <input id="lock-input" class="input lock-input" type="password" inputmode="numeric"
@@ -37,10 +75,10 @@
   <h1>Qui s'entraîne&nbsp;?</h1>
   <div class="profile-cards">
     <button class="profile-card" data-profil="celia" style="--accent:var(--cognac)">
-      <span class="profile-emoji">🔥</span><span class="profile-name">Célia</span>
+      <span class="profile-emoji"><svg class="ic" aria-hidden="true"><use href="#i-flame"/></svg></span><span class="profile-name">Célia</span>
     </button>
     <button class="profile-card" data-profil="jeremy" style="--accent:#3aa0ff">
-      <span class="profile-emoji">💪</span><span class="profile-name">Jérémy</span>
+      <span class="profile-emoji"><svg class="ic" aria-hidden="true"><use href="#i-dumbbell"/></svg></span><span class="profile-name">Jérémy</span>
     </button>
   </div>
 </div>
@@ -82,7 +120,7 @@
         <div class="exo-summary" id="stats-exo-summary"></div>
         <div id="stats-exo-chart"></div>
       </div>
-      <h2 class="section-title">🏆 Derniers records battus</h2>
+      <h2 class="section-title"><svg class="ic" aria-hidden="true"><use href="#i-trophy"/></svg> Derniers records battus</h2>
       <div class="card" id="stats-records"></div>
     </div>
 
@@ -96,8 +134,8 @@
   <section id="view-chrono" class="view">
     <div id="chrono-idle" class="chrono-idle">
       <p class="chrono-hint">Prêt·e pour ta séance&nbsp;?</p>
-      <button id="btn-start" class="btn btn-accent btn-big">▶&nbsp; Démarrer la séance</button>
-      <p class="hint">🔥 La séance démarre par une phase d'échauffement, comptée à part :
+      <button id="btn-start" class="btn btn-accent btn-big"><svg class="ic" aria-hidden="true"><use href="#i-play"/></svg> Démarrer la séance</button>
+      <p class="hint"><svg class="ic" aria-hidden="true"><use href="#i-flame"/></svg> La séance démarre par une phase d'échauffement, comptée à part :
       prends le temps de préparer ton corps et de consulter tes dernières perfs,
       puis lance l'activité quand tu es prête.</p>
     </div>
@@ -106,8 +144,8 @@
       <div class="chrono-topline">
         <span>Séance&nbsp;: <strong id="ch-total">00:00</strong></span>
         <span>
-          <button id="btn-sound" class="icon-btn icon-chip" aria-label="Son des alertes" title="Son des alertes">🔔</button>
-          <button id="btn-wakelock" class="icon-btn icon-chip" aria-label="Garder l’écran allumé" title="Garder l’écran allumé">💡</button>
+          <button id="btn-sound" class="icon-btn icon-chip" aria-label="Son des alertes" title="Son des alertes"><svg class="ic" aria-hidden="true"><use href="#i-bell"/></svg></button>
+          <button id="btn-wakelock" class="icon-btn icon-chip" aria-label="Garder l’écran allumé" title="Garder l’écran allumé"><svg class="ic" aria-hidden="true"><use href="#i-bulb"/></svg></button>
         </span>
       </div>
 
@@ -131,11 +169,13 @@
       </div>
 
       <div class="chrono-btns">
-        <button id="btn-go" class="btn btn-accent btn-big hidden">🏁&nbsp; Commencer l'activité</button>
-        <button id="btn-lap" class="btn btn-accent btn-big">⏸&nbsp; Tour — début de pause</button>
-        <button id="btn-resume" class="btn btn-second btn-big hidden">▶&nbsp; Reprendre l'activité</button>
-        <button id="btn-stop" class="btn btn-outline">■&nbsp; Terminer la séance</button>
+        <button id="btn-go" class="btn btn-accent btn-big hidden"><svg class="ic" aria-hidden="true"><use href="#i-flag"/></svg> Commencer l'activité</button>
+        <button id="btn-lap" class="btn btn-accent btn-big"><svg class="ic" aria-hidden="true"><use href="#i-pause"/></svg> Tour — début de pause</button>
+        <button id="btn-resume" class="btn btn-second btn-big hidden"><svg class="ic" aria-hidden="true"><use href="#i-play"/></svg> Reprendre l'activité</button>
+        <button id="btn-stop" class="btn btn-outline"><svg class="ic" aria-hidden="true"><use href="#i-stop"/></svg> Terminer la séance</button>
       </div>
+
+      <div id="prog-card" class="card prog-card hidden"></div>
 
       <div class="card exo-card">
         <h3>Carnet — noter une série</h3>
@@ -147,7 +187,7 @@
             <input id="exo-charge" class="input" type="number" inputmode="decimal" step="0.5" min="0" placeholder="kg">
             <input id="exo-reps" class="input" type="number" inputmode="numeric" min="1" placeholder="reps">
             <input id="exo-sec" class="input hidden" type="number" inputmode="numeric" min="1" placeholder="secondes">
-            <button id="btn-add-serie" class="btn btn-accent">＋</button>
+            <button id="btn-add-serie" class="btn btn-accent" aria-label="Ajouter la série"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg></button>
           </div>
         </div>
         <div id="exo-hint" class="exo-hint hidden"></div>
@@ -164,9 +204,9 @@
       <button id="plan-next" class="btn btn-outline btn-nav">›</button>
     </div>
     <div class="planning-actions">
-      <button id="plan-mode" class="chip">🗓 Vue mois</button>
-      <button id="plan-save-type" class="chip">💾 Semaine type</button>
-      <button id="plan-apply-type" class="chip">📋 Appliquer la semaine type</button>
+      <button id="plan-mode" class="chip"><svg class="ic" aria-hidden="true"><use href="#i-calendar"/></svg> Vue mois</button>
+      <button id="plan-save-type" class="chip"><svg class="ic" aria-hidden="true"><use href="#i-save"/></svg> Semaine type</button>
+      <button id="plan-apply-type" class="chip"><svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg> Appliquer la semaine type</button>
     </div>
     <div id="plan-rest" class="hidden"></div>
     <div id="plan-week"></div>
@@ -178,13 +218,13 @@
   <!-- ===== COACH ===== -->
   <section id="view-coach" class="view">
     <div class="card">
-      <p style="font-size:14.5px;line-height:1.6">🎯 Réponds à ces 5 questions et je te construis un
+      <p style="font-size:14.5px;line-height:1.6"><svg class="ic" aria-hidden="true"><use href="#i-target"/></svg> Réponds à ces 5 questions et je te construis un
       <strong>programme sur mesure</strong>, basé sur les méthodes éprouvées de la musculation.
       Tu pourras l'appliquer à ton planning en un tap.</p>
     </div>
     <div id="coach-form"></div>
     <div id="coach-result"></div>
-    <p class="hint">⚕️ Ces programmes suivent les conventions solides de la musculation (splits éprouvés,
+    <p class="hint"><svg class="ic" aria-hidden="true"><use href="#i-info"/></svg> Ces programmes suivent les conventions solides de la musculation (splits éprouvés,
     plage 8-12, priorité par le volume et la fréquence). Ils ne remplacent ni un coach diplômé ni un avis
     médical : en cas de douleur ou de pathologie, fais-toi accompagner.</p>
   </section>
@@ -194,10 +234,13 @@
     <h2 class="section-title">Profil actif</h2>
     <div class="profile-switch" id="profil-switch"></div>
 
+    <h2 class="section-title">Poids &amp; mensurations</h2>
+    <div class="card" id="mesures"></div>
+
     <h2 class="section-title">Apparence</h2>
     <div class="theme-switch" id="theme-switch">
-      <button class="pswitch" data-theme-choice="expresso">☕ Expresso</button>
-      <button class="pswitch" data-theme-choice="clair">☀️ Clair</button>
+      <button class="pswitch" data-theme-choice="expresso"><svg class="ic" aria-hidden="true"><use href="#i-coffee"/></svg> Expresso</button>
+      <button class="pswitch" data-theme-choice="clair"><svg class="ic" aria-hidden="true"><use href="#i-sun"/></svg> Clair</button>
     </div>
 
     <h2 class="section-title">Réglages</h2>
@@ -226,18 +269,19 @@
       <label>Clé d'accès GitHub (à coller une fois par appareil)
         <input id="set-ghtoken" class="input" type="password" autocomplete="off" placeholder="ghp_…">
       </label>
-      <button id="btn-cloud-save" class="btn btn-accent">☁️&nbsp; Sauvegarder en ligne</button>
-      <button id="btn-cloud-restore" class="btn btn-outline">⬇&nbsp; Restaurer la sauvegarde</button>
+      <button id="btn-cloud-save" class="btn btn-accent"><svg class="ic" aria-hidden="true"><use href="#i-cloud"/></svg> Sauvegarder maintenant</button>
+      <button id="btn-cloud-restore" class="btn btn-outline"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg> Restaurer la sauvegarde</button>
       <p id="cloud-status" class="hint"></p>
       <p class="hint">La sauvegarde part dans un «&nbsp;gist&nbsp;» <strong>privé</strong> de ton compte GitHub —
-      invisible du public, gratuit. Pour créer ta clé&nbsp;: github.com → Settings → Developer settings →
+      invisible du public, gratuit. Une fois la clé collée, la sauvegarde se fait
+      <strong>toute seule</strong> après chaque séance (et à l'ouverture de l'app s'il reste des changements). Pour créer ta clé&nbsp;: github.com → Settings → Developer settings →
       Personal access tokens (classic) → Generate new token, coche <strong>uniquement «&nbsp;gist&nbsp;»</strong>.</p>
     </div>
 
     <h2 class="section-title">Sauvegarde manuelle</h2>
     <div class="card settings">
-      <button id="btn-export" class="btn btn-outline">⬇&nbsp; Exporter mes données (JSON)</button>
-      <label class="btn btn-outline file-btn">⬆&nbsp; Importer des données
+      <button id="btn-export" class="btn btn-outline"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg> Exporter mes données (JSON)</button>
+      <label class="btn btn-outline file-btn"><svg class="ic" aria-hidden="true"><use href="#i-upload"/></svg> Importer des données
         <input id="input-import" type="file" accept=".json,application/json" hidden>
       </label>
       <p class="hint">Tes données restent sur cet appareil. L'export télécharge un fichier
@@ -248,11 +292,11 @@
 </main>
 
 <nav class="bottom-nav">
-  <button data-view="stats" class="nav-btn"><span>📊</span>Stats</button>
-  <button data-view="chrono" class="nav-btn"><span>⏱️</span>Chrono</button>
-  <button data-view="planning" class="nav-btn"><span>📅</span>Planning</button>
-  <button data-view="coach" class="nav-btn"><span>🎯</span>Coach</button>
-  <button data-view="profil" class="nav-btn"><span>👤</span>Profil</button>
+  <button data-view="stats" class="nav-btn"><svg class="ic" aria-hidden="true"><use href="#i-chart"/></svg>Stats</button>
+  <button data-view="chrono" class="nav-btn"><svg class="ic" aria-hidden="true"><use href="#i-timer"/></svg>Chrono</button>
+  <button data-view="planning" class="nav-btn"><svg class="ic" aria-hidden="true"><use href="#i-calendar"/></svg>Planning</button>
+  <button data-view="coach" class="nav-btn"><svg class="ic" aria-hidden="true"><use href="#i-target"/></svg>Coach</button>
+  <button data-view="profil" class="nav-btn"><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg>Profil</button>
 </nav>
 
 <div id="modal-root"></div>

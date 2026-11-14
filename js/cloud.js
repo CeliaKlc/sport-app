@@ -50,6 +50,47 @@ const Cloud = {
     this.markBackup();
   },
 
+  /* ---- sauvegarde automatique ----
+     Déclenchée après chaque séance, à l'ouverture de l'app et au retour du réseau,
+     uniquement s'il y a eu des changements depuis la dernière sauvegarde.
+     Sécurité : si la sauvegarde en ligne contient plus de séances que l'appareil
+     (téléphone neuf, données effacées…), on n'écrase rien et on prévient. */
+  CHANGE_KEY: "sportapp-lastchange",
+  autoRunning: false,
+  lastAutoError: "",
+
+  markChange() { localStorage.setItem(this.CHANGE_KEY, String(Date.now())); },
+  hasPending() { return Number(localStorage.getItem(this.CHANGE_KEY) || 0) > this.lastBackup(); },
+
+  async autoSave() {
+    if (this.autoRunning || !this.token() || !Store.current || !navigator.onLine || !this.hasPending()) return;
+    this.autoRunning = true;
+    try {
+      const g = await this.findGist();
+      if (g && g.files[this.fileName()]) {
+        const res = await this.api("/gists/" + g.id);
+        if (!res.ok) throw new Error("GitHub a répondu " + res.status);
+        const file = (await res.json()).files[this.fileName()];
+        let content = file.content;
+        if (file.truncated) content = await (await fetch(file.raw_url)).text();
+        let enLigne = 0;
+        try { enLigne = (JSON.parse(content).seances || []).length; } catch (e) { /* fichier illisible : on le remplace */ }
+        if (enLigne > Store.data.seances.length) {
+          this.lastAutoError = `la sauvegarde en ligne contient plus de séances (${enLigne}) que ce téléphone (${Store.data.seances.length}) — restaure-la depuis Profil`;
+          throw new Error(this.lastAutoError);
+        }
+      }
+      await this.save();
+      this.lastAutoError = "";
+      toast("Sauvegardé en ligne", "cloud");
+    } catch (err) {
+      this.lastAutoError = err.message;
+    } finally {
+      this.autoRunning = false;
+      if (typeof Profil !== "undefined" && UI.current === "profil") Profil.renderCloudStatus();
+    }
+  },
+
   async restore() {
     const g = await this.findGist();
     if (!g || !g.files[this.fileName()]) {
@@ -65,5 +106,6 @@ const Cloud = {
     Store.data = d;
     Store.save();
     Store.load(); // ré-applique la fusion avec les valeurs par défaut
+    this.markBackup(); // ce qui vient d'être restauré est déjà en ligne
   }
 };

@@ -198,7 +198,8 @@ const Store = {
       tagsPerso: { celia: [], jeremy: [] },
       programme: { celia: {}, jeremy: {} },  // exercices prévus par jour
       coach: { celia: null, jeremy: null },  // réponses au questionnaire Coach
-      exoMeta: { celia: {}, jeremy: {} }     // mode de charge choisi par exercice
+      exoMeta: { celia: {}, jeremy: {} },    // mode de charge choisi par exercice
+      mesures: { celia: [], jeremy: [] }     // poids et mensurations datés
     };
   },
 
@@ -209,7 +210,7 @@ const Store = {
     this.data = Object.assign(def, saved || {});
     // fusionne les sous-objets pour ne jamais perdre un profil manquant
     const def2 = this.defaults();
-    for (const k of ["profils", "planning", "semaineType", "exosPerso", "tagsPerso", "programme", "coach", "exoMeta"]) {
+    for (const k of ["profils", "planning", "semaineType", "exosPerso", "tagsPerso", "programme", "coach", "exoMeta", "mesures"]) {
       this.data[k] = Object.assign({}, def2[k], this.data[k] || {});
     }
     this.current = localStorage.getItem(this.PROFILE_KEY) || null;
@@ -238,6 +239,7 @@ const Store = {
 
   save() {
     localStorage.setItem(this.KEY, JSON.stringify(this.data));
+    localStorage.setItem("sportapp-lastchange", String(Date.now())); // pour la sauvegarde automatique
   },
 
   setProfile(id) {

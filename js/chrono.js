@@ -30,6 +30,7 @@ const Chrono = {
       $("#exo-custom").classList.toggle("hidden", $("#exo-select").value !== "__autre");
       this.renderModeChips();
       this.updateHint(true);
+      this.renderProg();
     };
     // ré-acquiert le wake lock quand on revient sur l'app
     document.addEventListener("visibilitychange", () => {
@@ -191,7 +192,7 @@ const Chrono = {
     $("#btn-lap").classList.toggle("hidden", st !== "active");
     $("#btn-resume").classList.toggle("hidden", st !== "pause");
     $("#ch-pause-info").classList.toggle("hidden", st === "active");
-    $("#ch-mode").textContent = st === "warmup" ? "🔥 ÉCHAUFFEMENT" : st === "pause" ? "PAUSE" : "ACTIVITÉ";
+    $("#ch-mode").innerHTML = st === "warmup" ? icon("flame") + " ÉCHAUFFEMENT" : st === "pause" ? "PAUSE" : "ACTIVITÉ";
     if (st === "warmup") {
       $("#ch-pause-info").innerHTML =
         "Mobilité, cardio léger, séries légères… Ce temps ne compte pas dans ton temps actif. " +
@@ -255,7 +256,7 @@ const Chrono = {
     const prog = (Store.data.programme[this.st.profil] || {})[dayISO] || [];
     let html = "";
     if (prog.length) {
-      html += `<optgroup label="📋 Prévu aujourd'hui">` +
+      html += `<optgroup label="Prévu aujourd'hui">` +
         prog.map(e => `<option value="${esc(e)}">${esc(e)}</option>`).join("") +
         `</optgroup>`;
     }
@@ -327,12 +328,46 @@ const Chrono = {
         ? s.sec + " s"
         : [s.charge ? s.charge + " kg" : null, s.reps ? "× " + s.reps : null].filter(Boolean).join(" ");
       return `<li><span>${esc(s.exo)} <small>${esc(detail)}</small></span>
-        <button class="chip" data-del="${realIdx}">✕</button></li>`;
+        <button class="chip chip-icon" data-del="${realIdx}" aria-label="Supprimer">${icon("x")}</button></li>`;
     }).join("");
     $$("#exo-log [data-del]").forEach(b => b.onclick = () => {
       this.st.series.splice(Number(b.dataset.del), 1);
       this.persist();
       this.renderLog();
+    });
+    this.renderProg();
+  },
+
+  /* ---- programme du jour (préparé dans le Planning) : exercices cochés au fil de la séance ---- */
+  renderProg() {
+    const card = $("#prog-card");
+    const dayISO = dateToISO(new Date(this.st.events[0].t));
+    const prog = (Store.data.programme[this.st.profil] || {})[dayISO] || [];
+    card.classList.toggle("hidden", !prog.length);
+    if (!prog.length) return;
+    const nb = {};
+    this.st.series.forEach(x => nb[x.exo] = (nb[x.exo] || 0) + 1);
+    const faits = prog.filter(e => nb[e]).length;
+    const suivant = prog.find(e => !nb[e]);
+    const courant = $("#exo-select").value;
+    card.innerHTML = `
+      <div class="prog-head">
+        <span>${icon("list")} Programme du jour</span>
+        <strong>${faits}/${prog.length}</strong>
+      </div>
+      <div class="prog-bar"><i style="width:${faits / prog.length * 100}%"></i></div>
+      <div class="prog-list">${prog.map((e, i) => `
+        <button class="prog-item${nb[e] ? " done" : ""}${e === suivant ? " next" : ""}${e === courant ? " current" : ""}" data-exo="${esc(e)}">
+          <span class="prog-check">${nb[e] ? icon("check") : i + 1}</span>
+          <span class="prog-nom">${esc(e)}</span>
+          <small>${nb[e] ? nb[e] + " série" + (nb[e] > 1 ? "s" : "") : e === suivant ? "à suivre" : ""}</small>
+        </button>`).join("")}</div>
+      ${faits === prog.length ? `<p class="prog-done">Programme terminé, bravo ! 🎉</p>` : ""}`;
+    card.querySelectorAll("[data-exo]").forEach(b => b.onclick = () => {
+      const sel = $("#exo-select");
+      sel.value = b.dataset.exo;
+      sel.onchange();
+      $(".exo-card").scrollIntoView({ behavior: "smooth", block: "start" });
     });
   },
 
@@ -387,7 +422,7 @@ const Chrono = {
       if (best.charge && (prefill || !$("#exo-charge").value)) $("#exo-charge").value = best.charge;
     }
     hint.innerHTML = `Dernière fois (${esc(fmtDateFR(last.date))}) : ${last.series.map(fmtS).map(esc).join(" · ")}` +
-      (sugg ? `<br>💡 <strong>${esc(sugg)}</strong>` : "");
+      (sugg ? `<br>${icon("bulb")} <strong>${esc(sugg)}</strong>` : "");
     hint.classList.remove("hidden");
   },
 
@@ -418,10 +453,10 @@ const Chrono = {
         style="${planned === m ? "background:" + tagColor(m) : ""}">${esc(m)}</button>`).join("");
 
     const { el, close } = openModal(`
-      <h3>Séance terminée 💪</h3>
+      <h3>Séance terminée !</h3>
       <div class="recap-grid">
         <div class="stat-card"><div class="val">${fmtChrono(t.total)}</div><div class="lbl">Durée totale</div></div>
-        <div class="stat-card"><div class="val">${t.warm ? fmtChrono(t.warm) : "—"}</div><div class="lbl">Échauffement 🔥</div></div>
+        <div class="stat-card"><div class="val">${t.warm ? fmtChrono(t.warm) : "—"}</div><div class="lbl">Échauffement</div></div>
         <div class="stat-card"><div class="val">${fmtChrono(t.act)}</div><div class="lbl">Temps actif</div></div>
         <div class="stat-card"><div class="val">${fmtChrono(t.pau)}</div><div class="lbl">Temps de pause</div></div>
         <div class="stat-card"><div class="val">${t.nbSeries}</div><div class="lbl">Séries</div></div>
@@ -430,9 +465,9 @@ const Chrono = {
       </div>
       <h3>Muscle travaillé&nbsp;?</h3>
       <div class="chip-list" id="recap-muscles">${chips}</div>
-      <button id="recap-save" class="btn btn-accent">💾 Enregistrer la séance</button>
-      <button id="recap-cancel" class="btn btn-outline">⏱ Non, reprendre le chrono</button>
-      <button id="recap-discard" class="btn btn-outline">🗑 Abandonner sans enregistrer</button>
+      <button id="recap-save" class="btn btn-accent">${icon("save")} Enregistrer la séance</button>
+      <button id="recap-cancel" class="btn btn-outline">${icon("timer")} Non, reprendre le chrono</button>
+      <button id="recap-discard" class="btn btn-outline btn-danger">${icon("trash")} Abandonner sans enregistrer</button>
     `);
 
     let muscle = planned && planned !== "Repos" ? planned : null;
@@ -464,6 +499,7 @@ const Chrono = {
       });
       close();
       this.showIdle();
+      Cloud.autoSave(); // la séance part tout de suite dans la sauvegarde en ligne
       if (records.length) this.celebrate(records);
       else UI.show("stats");
     };
@@ -516,7 +552,7 @@ const Chrono = {
 
   celebrate(records) {
     const { el, close } = openModal(`
-      <div class="celebrate-emoji">🏆</div>
+      <div class="celebrate-emoji">${icon("trophy")}</div>
       <h3 style="text-align:center">Record${records.length > 1 ? "s" : ""} battu${records.length > 1 ? "s" : ""} !</h3>
       <div>${records.map(r => `
         <div class="record-row"><span>${esc(r.nom)}</span>

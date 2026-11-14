@@ -9,7 +9,7 @@ const Planning = {
     $("#plan-next").onclick = () => this.shift(1);
     $("#plan-mode").onclick = () => {
       this.mode = this.mode === "week" ? "month" : "week";
-      $("#plan-mode").textContent = this.mode === "week" ? "🗓 Vue mois" : "📆 Vue semaine";
+      $("#plan-mode").innerHTML = this.mode === "week" ? icon("calendar") + " Vue mois" : icon("rows") + " Vue semaine";
       this.render();
     };
     $("#plan-save-type").onclick = () => this.saveType();
@@ -63,7 +63,7 @@ const Planning = {
     if (nb >= 2) { el.innerHTML = ""; el.classList.add("hidden"); return; }
     el.classList.remove("hidden");
     el.innerHTML = `<div class="banner">
-      <span>💤 Jours de repos posés : <strong>${nb}/2</strong> — le muscle se construit au repos&nbsp;!</span>
+      <span class="banner-txt">${icon("moon")}<span>Jours de repos posés : <strong>${nb}/2</strong> — le muscle se construit au repos&nbsp;!</span></span>
       <button class="btn btn-small btn-accent">Placer</button></div>`;
     el.querySelector("button").onclick = () => this.autoRest(monday);
   },
@@ -116,9 +116,9 @@ const Planning = {
           <span class="slot-lbl">Prévu</span>
           <button class="tag-btn${prevu ? " set" : ""}" data-date="${iso}"
             style="${prevu ? "background:" + tagColor(prevu) + ";border-color:transparent" : ""}">
-            ${prevu ? esc(prevu) : "＋ Prévoir"}
+            ${prevu ? esc(prevu) : icon("plus") + " Prévoir"}
           </button>
-          ${nbExos ? `<span class="prog-count">📋 ${nbExos} exo${nbExos > 1 ? "s" : ""}</span>` : ""}
+          ${nbExos ? `<span class="prog-count">${icon("list")} ${nbExos} exo${nbExos > 1 ? "s" : ""}</span>` : ""}
         </div>
         <div class="day-slot">
           <span class="slot-lbl">Réalisé</span>
@@ -128,7 +128,7 @@ const Planning = {
               : "—"
           }</span>
         </div>
-        ${conflit ? `<span class="rest-warn">⚠️ Moins de 48 h de repos pour&nbsp;: ${esc(conflit.groupes.join(", "))} (avec ${esc(conflit.tag2)} du ${esc(fmtDateFR(conflit.other))})</span>` : ""}
+        ${conflit ? `<span class="rest-warn">${icon("alert")} Moins de 48 h de repos pour&nbsp;: ${esc(conflit.groupes.join(", "))} (avec ${esc(conflit.tag2)} du ${esc(fmtDateFR(conflit.other))})</span>` : ""}
       </div>`;
     }).join("");
 
@@ -182,7 +182,7 @@ const Planning = {
       <div class="chip-list" id="picker-exos"></div>
       <div class="exo-row">
         <select id="picker-exo-select" class="input"></select>
-        <button id="picker-exo-add" class="btn btn-accent picker-add">＋</button>
+        <button id="picker-exo-add" class="btn btn-accent picker-add" aria-label="Ajouter">${icon("plus")}</button>
       </div>
       <input id="picker-exo-custom" class="input hidden picker-section" placeholder="Nom de l'exercice">
       <button class="btn btn-outline" data-clear>Effacer ce jour</button>
@@ -194,7 +194,7 @@ const Planning = {
       el.querySelector("#picker-tags").innerHTML = all.map(t =>
         `<button class="chip${plan[iso] === t ? " on" : ""}" data-tag="${esc(t)}"
           style="${plan[iso] === t ? "background:" + tagColor(t) : ""}">${esc(t)}</button>`).join("") +
-        `<button class="chip" data-newtag>➕ Autre…</button>`;
+        `<button class="chip" data-newtag>${icon("plus")} Autre…</button>`;
       el.querySelectorAll("[data-tag]").forEach(b => b.onclick = () => {
         plan[iso] = b.dataset.tag;
         Store.save();
@@ -224,7 +224,7 @@ const Planning = {
     const renderExos = () => {
       const list = progAll[iso] || [];
       el.querySelector("#picker-exos").innerHTML = list.length
-        ? list.map((e, i) => `<span class="chip chip-exo">${esc(e)}<button data-rm="${i}">✕</button></span>`).join("")
+        ? list.map((e, i) => `<span class="chip chip-exo">${esc(e)}<button data-rm="${i}" aria-label="Retirer">${icon("x")}</button></span>`).join("")
         : `<span class="hint">Aucun — le chrono proposera toute la bibliothèque.</span>`;
       el.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => {
         progAll[iso].splice(Number(b.dataset.rm), 1);

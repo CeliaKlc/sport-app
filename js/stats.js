@@ -91,7 +91,7 @@ const Stats = {
     const el = $("#streak-card");
     el.classList.toggle("hidden", !streak);
     if (!streak) return;
-    el.innerHTML = `<span class="flame">🔥</span><div>
+    el.innerHTML = `<span class="flame">${icon("flame")}</span><div>
       <strong>${streak} semaine${streak > 1 ? "s" : ""} d'assiduité</strong><br>
       <small>Les jours de repos préservent la flamme 😌</small></div>`;
   },
@@ -105,7 +105,7 @@ const Stats = {
     const due = (total >= 3 && !last) || (total > 0 && last && Date.now() - last > unMois);
     banner.classList.toggle("hidden", !due);
     if (!due) return;
-    banner.innerHTML = `<span>💾 Pense à sauvegarder tes données&nbsp;!</span>
+    banner.innerHTML = `<span class="banner-txt">${icon("save")}<span>Pense à sauvegarder tes données&nbsp;!</span></span>
       <button class="btn btn-small btn-accent">Sauvegarder</button>`;
     banner.querySelector("button").onclick = () => UI.show("profil");
   },
@@ -354,14 +354,14 @@ const Stats = {
       <h3>${esc(fmtDateFull(s.date))}</h3>
       <div class="sheet-meta">
         <span class="tag" style="background:${s.muscle ? tagColor(s.muscle) : "#8a7b6b"}">${esc(s.muscle || "Séance")}</span>
-        <span>⏱ ${fmtDuree(s.tempsActif)} actif / ${fmtDuree(s.dureeTotale)}</span>
-        ${s.tempsEchauffement ? `<span>🔥 ${fmtDuree(s.tempsEchauffement)} échauff.</span>` : ""}
-        <span>🔁 ${s.nbSeries} série${s.nbSeries > 1 ? "s" : ""}</span>
-        <span>⚡ ${s.calories || 0} kcal</span>
+        <span>${icon("timer")} ${fmtDuree(s.tempsActif)} actif / ${fmtDuree(s.dureeTotale)}</span>
+        ${s.tempsEchauffement ? `<span>${icon("flame")} ${fmtDuree(s.tempsEchauffement)} échauff.</span>` : ""}
+        <span>${icon("repeat")} ${s.nbSeries} série${s.nbSeries > 1 ? "s" : ""}</span>
+        <span>${icon("zap")} ${s.calories || 0} kcal</span>
       </div>
       ${exos || `<p class="hint">Aucune série notée dans le carnet pour cette séance.</p>`}
-      ${exos ? `<button class="btn btn-outline" data-edit>✏️ Modifier les séries</button>` : ""}
-      <button class="btn btn-outline btn-danger" data-delete>🗑 Supprimer la séance</button>
+      ${exos ? `<button class="btn btn-outline" data-edit>${icon("pencil")} Modifier les séries</button>` : ""}
+      <button class="btn btn-outline btn-danger" data-delete>${icon("trash")} Supprimer la séance</button>
     `);
     const edit = el.querySelector("[data-edit]");
     if (edit) edit.onclick = () => { close(); this.editSeance(id); };
@@ -390,10 +390,10 @@ const Stats = {
             ? `<input class="input" type="number" min="0" data-f="sec" value="${r.x.sec}" placeholder="s"><span class="edit-unit">s</span>`
             : `<input class="input" type="number" step="0.5" min="0" data-f="charge" value="${r.x.charge || ""}" placeholder="kg">
                <input class="input" type="number" min="0" data-f="reps" value="${r.x.reps || ""}" placeholder="reps">`}
-          <button class="chip" data-del="${i}">✕</button>
+          <button class="chip chip-icon" data-del="${i}" aria-label="Supprimer">${icon("x")}</button>
         </div>`).join("")}</div>
-      <p class="hint">✕ supprime une série. Un exercice sans série restante disparaît de la séance.</p>
-      <button id="edit-save" class="btn btn-accent">💾 Enregistrer les modifications</button>
+      <p class="hint">${icon("x")} supprime une série. Un exercice sans série restante disparaît de la séance.</p>
+      <button id="edit-save" class="btn btn-accent">${icon("save")} Enregistrer les modifications</button>
     `);
 
     const supprimees = new Set();

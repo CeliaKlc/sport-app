@@ -50,7 +50,7 @@ const Coach = {
       ${q("jours", "Jours d'entraînement par semaine", "(2 jours de repos minimum, on y tient 😌)")}
       ${q("objectif", "Ton objectif principal")}
       ${q("priorites", "Zones à développer en priorité", "(2 max — elles reçoivent plus de volume et de fréquence)")}
-      <button id="coach-generate" class="btn btn-accent btn-big">🎯 Générer mon programme</button>
+      <button id="coach-generate" class="btn btn-accent btn-big">${icon("target")} Générer mon programme</button>
     </div>`;
 
     $$("#coach-form [data-q]").forEach(group => {
@@ -207,9 +207,9 @@ const Coach = {
           <span class="tag" style="background:${tagColor(j.tag)}">${esc(j.tag)}</span></div>
         <ul>${j.exos.map(e => `<li><span>${esc(e.nom)}</span><small>${esc(e.sr)}</small></li>`).join("")}</ul>
       </div>`).join("") +
-      `<div class="card">💤 <strong>Repos : ${esc(reposJours.join(" et "))}</strong> — c'est là que le muscle se construit.</div>` +
+      `<div class="card">${icon("moon")} <strong>Repos : ${esc(reposJours.join(" et "))}</strong> — c'est là que le muscle se construit.</div>` +
       `<div class="card">${p.notes.filter(Boolean).map(n => `<p class="hint">• ${esc(n)}</p>`).join("")}</div>` +
-      `<button id="coach-apply" class="btn btn-accent btn-big">📅 Appliquer à mon planning</button>
+      `<button id="coach-apply" class="btn btn-accent btn-big">${icon("calendar")} Appliquer à mon planning</button>
       <p class="hint">Remplit la semaine en cours, la semaine type et les exercices prévus de chaque jour
       (ton chrono te les proposera automatiquement). Tout reste modifiable jour par jour dans le Planning.</p>`;
     $("#coach-apply").onclick = () => this.apply(p);

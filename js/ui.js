@@ -75,7 +75,7 @@ const UI = {
   applyTheme() {
     const t = this.theme();
     const btn = $("#theme-toggle");
-    btn.textContent = t === "clair" ? "☕" : "☀️";
+    btn.innerHTML = icon(t === "clair" ? "coffee" : "sun");
     btn.setAttribute("aria-label", t === "clair" ? "Passer en thème Expresso" : "Passer en thème clair");
     $$("[data-theme-choice]").forEach(b => b.classList.toggle("active", b.dataset.themeChoice === t));
     const meta = document.querySelector('meta[name="theme-color"]');
@@ -94,6 +94,19 @@ function accentOf(p) {
   const c = (p && p.couleur || "").toLowerCase();
   return c === "#f0417a" || c === "#f0427b" ? "var(--cognac)" : (p && p.couleur) || "var(--cognac)";
 }
+
+/* --- petit message éphémère au-dessus de la barre du bas --- */
+function toast(msg, ico) {
+  let t = $("#toast");
+  if (!t) { t = document.createElement("div"); t.id = "toast"; t.className = "toast"; document.body.appendChild(t); }
+  t.innerHTML = (ico ? icon(ico) + " " : "") + esc(msg);
+  t.classList.add("show");
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => t.classList.remove("show"), 2200);
+}
+
+/* --- icônes dessinées (sprite SVG défini dans index.html) --- */
+function icon(name, cls) { return `<svg class="ic${cls ? " " + cls : ""}" aria-hidden="true"><use href="#i-${name}"/></svg>`; }
 
 /* --- modale (feuille qui monte du bas) --- */
 function openModal(html) {
@@ -120,7 +133,7 @@ function exoOptionsHtml(profil) {
       perso.map(e => `<option value="${esc(e)}">${esc(e)}</option>`).join("") +
       `</optgroup>`;
   }
-  html += `<option value="__autre">➕ Autre exercice…</option>`;
+  html += `<option value="__autre">+ Autre exercice…</option>`;
   return html;
 }
 
