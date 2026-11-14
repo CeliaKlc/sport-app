@@ -446,7 +446,7 @@ const Chrono = {
     const dateISO = dateToISO(new Date(this.st.events[0].t));
     const planned = (Store.data.planning[this.st.profil] || {})[dateISO];
 
-    const allTags = MUSCLES.concat(TAGS_COMBOS, Store.data.tagsPerso[this.st.profil] || []);
+    const allTags = MUSCLES.slice();
     if (planned && planned !== "Repos" && !allTags.includes(planned)) allTags.unshift(planned);
     const chips = allTags.map(m =>
       `<button class="chip${planned === m ? " on" : ""}" data-muscle="${esc(m)}"

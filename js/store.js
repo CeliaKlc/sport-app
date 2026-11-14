@@ -2,7 +2,7 @@
 
 /* Split PPL + Upper/Lower :
    Push = pecs, épaules, triceps · Pull = dos, biceps · Legs/Lower = jambes · Upper = haut du corps */
-const MUSCLES = ["Push", "Pull", "Legs", "Upper", "Lower", "Cardio"];
+const MUSCLES = ["Push", "Pull", "Legs", "Upper", "Lower", "Abdos", "Full body", "Cardio"];
 const PLAN_TAGS = MUSCLES.concat(["Repos"]);
 
 const MUSCLE_COLORS = {
@@ -11,15 +11,39 @@ const MUSCLE_COLORS = {
   "Legs": "#f97316",
   "Upper": "#38bdf8",
   "Lower": "#a855f7",
+  "Abdos": "#14b8a6",
+  "Full body": "#eab308",
   "Cardio": "#ec4899",
   "Repos": "#64748b"
 };
 
-// programmes combinés proposés en plus des tags de base
-const TAGS_COMBOS = [
-  "Fessiers + quadriceps", "Fessiers + ischios", "Jambes + fessiers",
-  "Dos + biceps", "Pecs + triceps", "Abdos + pecs", "Épaules + bras"
-];
+/* Anciens types de séance combinés → type de base. Les séances passées, le planning,
+   la semaine type et les programmes sont convertis au chargement (stats conservées). */
+const TAGS_ANCIENS = {
+  "Fessiers + quadriceps": "Legs", "Fessiers + ischios": "Legs", "Jambes + fessiers": "Legs",
+  "Dos + biceps": "Pull",
+  "Pecs + triceps": "Push", "Pecs + triceps + épaules": "Push", "Épaules + triceps + abdos": "Push", "Abdos + pecs": "Push",
+  "Épaules + bras": "Upper",
+  "Abdominaux": "Abdos", "Abdominaux + Cardio": "Cardio"
+};
+function normalizeTag(tag) {
+  if (!tag || PLAN_TAGS.includes(tag)) return tag;
+  if (TAGS_ANCIENS[tag]) return TAGS_ANCIENS[tag];
+  // type perso inconnu : on devine d'après les muscles cités
+  const t = tag.toLowerCase();
+  if (t.includes("cardio")) return "Cardio";
+  const g = muscleGroups(tag);
+  const jambes = g.some(x => ["fessiers", "quadriceps", "ischios", "mollets"].includes(x));
+  const pousse = g.some(x => ["pecs", "epaules", "triceps"].includes(x));
+  const tire = g.some(x => ["dos", "biceps"].includes(x));
+  if (jambes && (pousse || tire)) return "Full body";
+  if (jambes) return "Legs";
+  if (pousse && tire) return "Upper";
+  if (pousse) return "Push";
+  if (tire) return "Pull";
+  if (g.includes("abdos")) return "Abdos";
+  return tag;
+}
 
 // couleur stable pour n'importe quel tag (les personnalisés inclus)
 const TAG_PALETTE = ["#f97316", "#22c55e", "#ef4444", "#eab308", "#a855f7", "#14b8a6", "#38bdf8", "#ec4899", "#84cc16", "#f43f5e", "#06b6d4", "#d946ef"];
@@ -32,15 +56,15 @@ function tagColor(tag) {
 
 /* groupes musculaires sollicités par un tag (pour l'alerte de repos < 72 h) */
 const GROUP_KEYWORDS = {
-  fessiers:   ["fessier", "glute", "jambe", "legs", "lower"],
-  quadriceps: ["quadri", "cuisse", "squat", "jambe", "legs", "lower"],
-  ischios:    ["ischio", "jambe", "legs", "lower"],
-  mollets:    ["mollet", "jambe", "legs", "lower"],
-  dos:        ["dos", "pull", "upper", "tirage", "rowing"],
-  pecs:       ["pec", "push", "upper"],
-  epaules:    ["épaule", "epaule", "push", "upper"],
-  biceps:     ["biceps", "pull", "upper"],
-  triceps:    ["triceps", "push", "upper"],
+  fessiers:   ["full", "fessier", "glute", "jambe", "legs", "lower"],
+  quadriceps: ["full", "quadri", "cuisse", "squat", "jambe", "legs", "lower"],
+  ischios:    ["full", "ischio", "jambe", "legs", "lower"],
+  mollets:    ["full", "mollet", "jambe", "legs", "lower"],
+  dos:        ["full", "dos", "pull", "upper", "tirage", "rowing"],
+  pecs:       ["full", "pec", "push", "upper"],
+  epaules:    ["full", "épaule", "epaule", "push", "upper"],
+  biceps:     ["full", "biceps", "pull", "upper"],
+  triceps:    ["full", "triceps", "push", "upper"],
   abdos:      ["abdo", "gainage"]
 };
 const GROUP_LABELS = {
@@ -199,7 +223,8 @@ const Store = {
       programme: { celia: {}, jeremy: {} },  // exercices prévus par jour
       coach: { celia: null, jeremy: null },  // réponses au questionnaire Coach
       exoMeta: { celia: {}, jeremy: {} },    // mode de charge choisi par exercice
-      mesures: { celia: [], jeremy: [] }     // poids et mensurations datés
+      mesures: { celia: [], jeremy: [] },    // poids et mensurations datés
+      modeles: { celia: [], jeremy: [] }     // programmes enregistrés : { nom, tag, exos }
     };
   },
 
@@ -210,11 +235,29 @@ const Store = {
     this.data = Object.assign(def, saved || {});
     // fusionne les sous-objets pour ne jamais perdre un profil manquant
     const def2 = this.defaults();
-    for (const k of ["profils", "planning", "semaineType", "exosPerso", "tagsPerso", "programme", "coach", "exoMeta", "mesures"]) {
+    for (const k of ["profils", "planning", "semaineType", "exosPerso", "tagsPerso", "programme", "coach", "exoMeta", "mesures", "modeles"]) {
       this.data[k] = Object.assign({}, def2[k], this.data[k] || {});
     }
     this.current = localStorage.getItem(this.PROFILE_KEY) || null;
     this.migrateExos();
+    this.migrateTags();
+  },
+
+  /* types de séance : uniquement les types de base (les anciens combinés sont regroupés) */
+  migrateTags() {
+    let change = false;
+    const conv = t => { const n = normalizeTag(t); if (n !== t) change = true; return n; };
+    this.data.seances.forEach(s => { if (s.muscle) s.muscle = conv(s.muscle); });
+    for (const k of ["planning", "semaineType"]) {
+      for (const plan of Object.values(this.data[k])) {
+        for (const d of Object.keys(plan || {})) plan[d] = conv(plan[d]);
+      }
+    }
+    for (const mods of Object.values(this.data.modeles)) (mods || []).forEach(m => { if (m.tag) m.tag = conv(m.tag); });
+    for (const id of Object.keys(this.data.tagsPerso)) {
+      if ((this.data.tagsPerso[id] || []).length) { this.data.tagsPerso[id] = []; change = true; }
+    }
+    if (change) this.save();
   },
 
   /* range les exercices perso devenus des exercices de la bibliothèque :
@@ -228,6 +271,7 @@ const Store = {
       this.data.seances.forEach(s => { if (s.profil === profil) (s.exercices || []).forEach(e => utilises.add(e.nom)); });
       Object.values(this.data.programme[profil] || {}).forEach(l => l.forEach(n => utilises.add(n)));
       Object.keys(this.data.exoMeta[profil] || {}).forEach(n => utilises.add(n));
+      (this.data.modeles[profil] || []).forEach(m => m.exos.forEach(n => utilises.add(n)));
       for (const [ancien, nouveau] of Object.entries(EXO_ALIASES)) {
         if (utilises.has(ancien)) { this.renameExo(ancien, nouveau, profil, true); change = true; }
       }
@@ -294,6 +338,10 @@ const Store = {
     for (const iso of Object.keys(prog)) {
       prog[iso] = prog[iso].map(n => (n === ancien ? nouveau : n)).filter((n, i, a) => a.indexOf(n) === i);
     }
+
+    (this.data.modeles[profil] || []).forEach(m => {
+      m.exos = m.exos.map(n => (n === ancien ? nouveau : n)).filter((n, i, a) => a.indexOf(n) === i);
+    });
 
     const meta = this.data.exoMeta[profil] || {};
     if (meta[ancien]) {

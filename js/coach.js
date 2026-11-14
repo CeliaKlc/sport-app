@@ -204,14 +204,15 @@ const Coach = {
       `<h2 class="section-title">Ton programme sur mesure</h2>` +
       p.jours.map(j => `<div class="card coach-day">
         <div class="coach-day-head"><strong>${esc(j.jour)}</strong>
-          <span class="tag" style="background:${tagColor(j.tag)}">${esc(j.tag)}</span></div>
+          <span class="tag" style="background:${tagColor(normalizeTag(j.tag))}">${esc(normalizeTag(j.tag))}</span></div>
         <ul>${j.exos.map(e => `<li><span>${esc(e.nom)}</span><small>${esc(e.sr)}</small></li>`).join("")}</ul>
       </div>`).join("") +
       `<div class="card">${icon("moon")} <strong>Repos : ${esc(reposJours.join(" et "))}</strong> — c'est là que le muscle se construit.</div>` +
       `<div class="card">${p.notes.filter(Boolean).map(n => `<p class="hint">• ${esc(n)}</p>`).join("")}</div>` +
       `<button id="coach-apply" class="btn btn-accent btn-big">${icon("calendar")} Appliquer à mon planning</button>
       <p class="hint">Remplit la semaine en cours, la semaine type et les exercices prévus de chaque jour
-      (ton chrono te les proposera automatiquement). Tout reste modifiable jour par jour dans le Planning.</p>`;
+      (ton chrono te les proposera automatiquement). Chaque journée est aussi enregistrée dans « Mes programmes ».
+      Tout reste modifiable jour par jour dans le Planning.</p>`;
     $("#coach-apply").onclick = () => this.apply(p);
   },
 
@@ -221,16 +222,21 @@ const Coach = {
     const monday = mondayOf(new Date());
     const plan = Store.data.planning[Store.current];
     const progAll = Store.data.programme[Store.current];
-    const persoTags = Store.data.tagsPerso[Store.current];
+    const mods = Store.data.modeles[Store.current];
     const type = {};
     for (let i = 0; i < 7; i++) {
       const iso = dateToISO(addDays(monday, i));
       const j = p.jours.find(x => x.weekday === i);
       if (j) {
-        plan[iso] = j.tag;
-        type[i] = j.tag;
+        const tag = normalizeTag(j.tag);
+        plan[iso] = tag;
+        type[i] = tag;
         progAll[iso] = j.exos.map(e => e.nom);
-        if (!PLAN_TAGS.includes(j.tag) && !TAGS_COMBOS.includes(j.tag) && !persoTags.includes(j.tag)) persoTags.push(j.tag);
+        // la journée devient un programme réutilisable (ex : « Fessiers + ischios » rangé en Lower)
+        const nom = j.tag === tag ? tag + " (Coach)" : j.tag;
+        const exist = mods.find(m => m.nom === nom);
+        if (exist) { exist.exos = progAll[iso].slice(); exist.tag = tag; }
+        else mods.push({ nom, tag, exos: progAll[iso].slice() });
       } else {
         plan[iso] = "Repos";
         type[i] = "Repos";

@@ -164,20 +164,49 @@ const Planning = {
     if (c) alert(`⚠️ Repos insuffisant !\n\n« ${c.tag2} » le ${fmtDateFull(c.other)} sollicite aussi : ${c.groupes.join(", ")}.\n\nLaisse au moins 48 h (un jour complet) au même groupe musculaire pour qu'il se reconstruise.`);
   },
 
-  /* ---- panneau du jour : programme + exercices prévus ---- */
+  /* ---- programmes enregistrés : listes d'exercices nommées, rattachées à un type de séance ---- */
+  modeles() {
+    const all = Store.data.modeles;
+    return all[Store.current] || (all[Store.current] = []);
+  },
+
+  /* exercices habituels pour un type de séance, d'après l'historique (les plus fréquents d'abord).
+     Si ce type a peu d'historique, on complète avec les séances qui travaillent les mêmes muscles. */
+  habituels(tag, max = 10) {
+    if (!tag || tag === "Repos") return [];
+    const seances = Store.seances();
+    const compte = (filtre) => {
+      const n = {};
+      seances.filter(filtre).forEach(s => (s.exercices || []).forEach(e => n[e.nom] = (n[e.nom] || 0) + 1));
+      return n;
+    };
+    const exact = compte(s => s.muscle === tag);
+    let res = Object.entries(exact).sort((a, b) => b[1] - a[1]).map(([nom]) => nom);
+    if (res.length < 4) {
+      const groupes = muscleGroups(tag);
+      if (groupes.length) {
+        const proches = compte(s => s.muscle !== tag && muscleGroups(s.muscle).some(g => groupes.includes(g)));
+        res = res.concat(Object.entries(proches).sort((a, b) => b[1] - a[1]).map(([nom]) => nom).filter(n => !res.includes(n)));
+      }
+    }
+    // le cardio d'échauffement (tapis, vélo…) n'est proposé que pour une séance de cardio
+    if (!/cardio/i.test(tag)) res = res.filter(n => !EXOS["Cardio"].includes(n));
+    return res.slice(0, max);
+  },
+
+  /* ---- panneau du jour : type de séance, programmes, exercices prévus ---- */
   openTagPicker(iso) {
     const plan = this.plan();
     const progAll = Store.data.programme[Store.current] || (Store.data.programme[Store.current] = {});
-    const persoTags = Store.data.tagsPerso[Store.current] || (Store.data.tagsPerso[Store.current] = []);
+    let source = null; // programme appliqué sur ce jour (pour proposer sa mise à jour)
 
     const { el, close } = openModal(`
       <h3>${esc(fmtDateFull(iso))}</h3>
-      <p class="slot-lbl">Programme du jour</p>
+      <p class="slot-lbl">Type de séance</p>
       <div class="chip-list" id="picker-tags"></div>
-      <div id="picker-custom" class="exo-row hidden">
-        <input id="picker-custom-input" class="input" placeholder="Ex : Fessiers + mollets">
-        <button id="picker-custom-ok" class="btn btn-accent picker-add">OK</button>
-      </div>
+
+      <div id="picker-modeles"></div>
+
       <p class="slot-lbl picker-section">Exercices prévus (facultatif)</p>
       <div class="chip-list" id="picker-exos"></div>
       <div class="exo-row">
@@ -185,40 +214,63 @@ const Planning = {
         <button id="picker-exo-add" class="btn btn-accent picker-add" aria-label="Ajouter">${icon("plus")}</button>
       </div>
       <input id="picker-exo-custom" class="input hidden picker-section" placeholder="Nom de l'exercice">
+      <div id="picker-habituels"></div>
+      <button class="btn btn-outline hidden" id="picker-save-modele">${icon("save")} Enregistrer comme programme</button>
+
       <button class="btn btn-outline" data-clear>Effacer ce jour</button>
       <button class="btn btn-accent" data-done>Terminé</button>
     `);
 
     const renderTags = () => {
-      const all = PLAN_TAGS.concat(TAGS_COMBOS, persoTags.filter(t => !PLAN_TAGS.includes(t) && !TAGS_COMBOS.includes(t)));
-      el.querySelector("#picker-tags").innerHTML = all.map(t =>
+      el.querySelector("#picker-tags").innerHTML = PLAN_TAGS.map(t =>
         `<button class="chip${plan[iso] === t ? " on" : ""}" data-tag="${esc(t)}"
-          style="${plan[iso] === t ? "background:" + tagColor(t) : ""}">${esc(t)}</button>`).join("") +
-        `<button class="chip" data-newtag>${icon("plus")} Autre…</button>`;
+          style="${plan[iso] === t ? "background:" + tagColor(t) : ""}">${esc(t)}</button>`).join("");
       el.querySelectorAll("[data-tag]").forEach(b => b.onclick = () => {
         plan[iso] = b.dataset.tag;
         Store.save();
         renderTags();
+        renderModeles();
+        renderHabituels();
         this.render();
         this.warnConflict(iso, b.dataset.tag);
       });
-      el.querySelector("[data-newtag]").onclick = () => {
-        el.querySelector("#picker-custom").classList.remove("hidden");
-        el.querySelector("#picker-custom-input").focus();
-      };
     };
 
-    el.querySelector("#picker-custom-ok").onclick = () => {
-      const t = el.querySelector("#picker-custom-input").value.trim();
-      if (!t) return;
-      if (!persoTags.includes(t) && !PLAN_TAGS.includes(t) && !TAGS_COMBOS.includes(t)) persoTags.push(t);
-      plan[iso] = t;
-      Store.save();
-      el.querySelector("#picker-custom-input").value = "";
-      el.querySelector("#picker-custom").classList.add("hidden");
-      renderTags();
-      this.render();
-      this.warnConflict(iso, t);
+    /* programmes enregistrés : ceux du type choisi d'abord, puis les autres */
+    const renderModeles = () => {
+      const box = el.querySelector("#picker-modeles");
+      const mods = this.modeles();
+      if (plan[iso] === "Repos" || !mods.length) { box.innerHTML = ""; return; }
+      const tag = plan[iso];
+      const duType = mods.filter(m => m.tag === tag);
+      const autres = mods.filter(m => m.tag !== tag);
+      const chip = m => {
+        const i = mods.indexOf(m);
+        return `<button class="modele-chip${source === m.nom ? " on" : ""}" data-mod="${i}">
+          <strong>${esc(m.nom)}</strong><small>${m.exos.length} exo${m.exos.length > 1 ? "s" : ""}${m.tag && m.tag !== tag ? " · " + esc(m.tag) : ""}</small>
+        </button>`;
+      };
+      box.innerHTML = `
+        <div class="picker-head picker-section">
+          <span class="slot-lbl">Mes programmes</span>
+          <button class="link-btn" data-gerer>Gérer</button>
+        </div>
+        <div class="modele-list">${duType.map(chip).join("")}${autres.length && duType.length ? `<span class="modele-sep">Autres</span>` : ""}${autres.map(chip).join("")}</div>`;
+      box.querySelectorAll("[data-mod]").forEach(b => b.onclick = () => {
+        const m = mods[Number(b.dataset.mod)];
+        const actuels = progAll[iso] || [];
+        if (actuels.length && actuels.join("|") !== m.exos.join("|") &&
+            !confirm(`Remplacer les ${actuels.length} exercice(s) prévus par le programme « ${m.nom} » ?`)) return;
+        progAll[iso] = m.exos.slice();
+        if (!plan[iso] && m.tag) { plan[iso] = m.tag; renderTags(); }
+        source = m.nom;
+        Store.save();
+        renderModeles();
+        renderExos();
+        this.render();
+        toast(`Programme « ${m.nom} » appliqué`, "list");
+      });
+      box.querySelector("[data-gerer]").onclick = () => this.manageModeles(() => { renderModeles(); });
     };
 
     const renderExos = () => {
@@ -233,6 +285,54 @@ const Planning = {
         renderExos();
         this.render();
       });
+      // bouton d'enregistrement : « mettre à jour » si la liste vient d'un programme et a changé
+      const btn = el.querySelector("#picker-save-modele");
+      const mod = source && this.modeles().find(m => m.nom === source);
+      const modifie = mod && mod.exos.join("|") !== list.join("|");
+      btn.classList.toggle("hidden", !list.length || (mod && !modifie));
+      btn.innerHTML = icon("save") + (modifie ? ` Mettre à jour « ${esc(source)} »` : " Enregistrer comme programme");
+      renderHabituels();
+    };
+
+    /* habituels : exercices fréquents pour ce type de séance, à ajouter d'un toucher */
+    const renderHabituels = () => {
+      const box = el.querySelector("#picker-habituels");
+      const list = progAll[iso] || [];
+      const sugg = this.habituels(plan[iso]).filter(e => !list.includes(e));
+      if (!sugg.length) { box.innerHTML = ""; return; }
+      box.innerHTML = `
+        <div class="picker-head picker-section">
+          <span class="slot-lbl">Tes habituels en ${esc(plan[iso])}</span>
+          ${sugg.length > 1 ? `<button class="link-btn" data-tous>Tout ajouter</button>` : ""}
+        </div>
+        <div class="chip-list">${sugg.map(e => `<button class="chip chip-sugg" data-sugg="${esc(e)}">${icon("plus")} ${esc(e)}</button>`).join("")}</div>`;
+      const ajouter = noms => {
+        const l = (progAll[iso] = progAll[iso] || []);
+        noms.forEach(n => { if (!l.includes(n)) l.push(n); });
+        Store.save();
+        renderExos();
+        this.render();
+      };
+      box.querySelectorAll("[data-sugg]").forEach(b => b.onclick = () => ajouter([b.dataset.sugg]));
+      const tous = box.querySelector("[data-tous]");
+      if (tous) tous.onclick = () => ajouter(sugg);
+    };
+
+    el.querySelector("#picker-save-modele").onclick = () => {
+      const list = progAll[iso] || [];
+      if (!list.length) return;
+      const mods = this.modeles();
+      const nom = (prompt("Nom du programme :", source || plan[iso] || "") || "").trim();
+      if (!nom) return;
+      const exist = mods.find(m => m.nom.toLowerCase() === nom.toLowerCase());
+      if (exist && exist.nom !== source && !confirm(`Le programme « ${exist.nom} » existe déjà. Le remplacer ?`)) return;
+      if (exist) { exist.exos = list.slice(); exist.tag = plan[iso] && plan[iso] !== "Repos" ? plan[iso] : exist.tag; }
+      else mods.push({ nom, tag: plan[iso] && plan[iso] !== "Repos" ? plan[iso] : null, exos: list.slice() });
+      source = exist ? exist.nom : nom;
+      Store.save();
+      renderModeles();
+      renderExos();
+      toast(exist ? "Programme mis à jour" : "Programme enregistré", "save");
     };
 
     const sel = el.querySelector("#picker-exo-select");
@@ -264,8 +364,50 @@ const Planning = {
     };
     el.querySelector("[data-done]").onclick = () => close();
 
+    // si la liste du jour correspond exactement à un programme, on le retient comme source
+    const dejaPrevu = (progAll[iso] || []).join("|");
+    const m0 = dejaPrevu && this.modeles().find(m => m.exos.join("|") === dejaPrevu);
+    if (m0) source = m0.nom;
+
     renderTags();
+    renderModeles();
     renderExos();
+  },
+
+  /* ---- gérer les programmes : renommer, changer le type, supprimer ---- */
+  manageModeles(onChange) {
+    const { el, close } = openModal(`<h3>Mes programmes</h3><div id="mod-list"></div>
+      <p class="hint">Pour modifier les exercices d'un programme : applique-le sur un jour, ajuste la liste,
+      puis touche « Mettre à jour ».</p>
+      <button class="btn btn-accent" data-ok>Terminé</button>`);
+    const render = () => {
+      const mods = this.modeles();
+      el.querySelector("#mod-list").innerHTML = mods.length ? mods.map((m, i) => `
+        <div class="mod-row">
+          <div class="mod-info">
+            <strong>${esc(m.nom)}</strong>
+            <small>${m.tag ? esc(m.tag) + " · " : ""}${m.exos.map(esc).join(", ")}</small>
+          </div>
+          <button class="chip chip-icon" data-ren="${i}" aria-label="Renommer">${icon("pencil")}</button>
+          <button class="chip chip-icon" data-del="${i}" aria-label="Supprimer">${icon("trash")}</button>
+        </div>`).join("") : `<p class="hint">Aucun programme enregistré.</p>`;
+      el.querySelectorAll("[data-ren]").forEach(b => b.onclick = () => {
+        const m = mods[Number(b.dataset.ren)];
+        const nom = (prompt("Nouveau nom du programme :", m.nom) || "").trim();
+        if (!nom || nom === m.nom) return;
+        if (mods.some(x => x !== m && x.nom.toLowerCase() === nom.toLowerCase())) { alert("Un programme porte déjà ce nom."); return; }
+        m.nom = nom;
+        Store.save(); render(); onChange && onChange();
+      });
+      el.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
+        const m = mods[Number(b.dataset.del)];
+        if (!confirm(`Supprimer le programme « ${m.nom} » ? Les jours déjà planifiés gardent leurs exercices.`)) return;
+        mods.splice(Number(b.dataset.del), 1);
+        Store.save(); render(); onChange && onChange();
+      });
+    };
+    el.querySelector("[data-ok]").onclick = () => close();
+    render();
   },
 
   /* ---- semaine type ---- */

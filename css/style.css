@@ -487,3 +487,24 @@ button.record-row:last-of-type{border-bottom:none}
 .banner-txt{display:flex;align-items:center;gap:8px}
 .banner-txt>.ic{width:18px;height:18px}
 .hint>.ic:first-child,.card>p>.ic:first-child{float:left;margin:.2em 7px 0 0}
+
+/* ===== Planning : programmes enregistrés et exercices habituels ===== */
+.picker-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.picker-head .slot-lbl{margin:0}
+.link-btn{background:none;border:none;color:var(--accent);font-weight:600;font-size:13px;padding:4px 0}
+.modele-list{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.modele-list::-webkit-scrollbar{display:none}
+.modele-chip{flex:none;display:flex;flex-direction:column;align-items:flex-start;gap:2px;max-width:220px;
+  background:var(--card2);border:1.5px solid var(--line);border-radius:14px;padding:9px 12px;color:var(--text);text-align:left;font-family:inherit}
+.modele-chip strong{font-family:var(--f-title);font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.modele-chip small{font-size:11.5px;color:var(--muted);white-space:nowrap}
+.modele-chip.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--card2))}
+.modele-sep{flex:none;align-self:center;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;padding:0 2px}
+.chip-sugg{background:transparent;border:1.5px dashed var(--line-2);color:var(--muted)}
+.chip-sugg .ic{width:13px;height:13px}
+#picker-save-modele{margin-top:12px}
+.mod-row{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}
+.mod-row:last-child{border-bottom:none}
+.mod-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.mod-info strong{font-family:var(--f-title);font-weight:600}
+.mod-info small{color:var(--muted);font-size:12px;line-height:1.4}
