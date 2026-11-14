@@ -57,10 +57,7 @@ const UI = {
   applyAccent() {
     const p = Store.profil();
     if (!p) return;
-    document.documentElement.style.setProperty("--accent", p.couleur);
-    // fin du dégradé de l'accent : rose → corail pour Célia, bleu → ciel pour Jérémy
-    const fin = { "#f0417a": "#ff8a5c", "#3aa0ff": "#6fd3ff" }[(p.couleur || "").toLowerCase()];
-    document.documentElement.style.setProperty("--accent-2", fin || p.couleur);
+    document.documentElement.style.setProperty("--accent", accentOf(p));
     $("#profile-chip").textContent = p.nom;
   },
 
@@ -90,6 +87,13 @@ const UI = {
     this.applyTheme();
   }
 };
+
+/* couleur d'accent d'un profil : l'ancien rose de Célia devient le cognac du thème
+   (var CSS, donc il s'ajuste tout seul entre Expresso et Clair) */
+function accentOf(p) {
+  const c = (p && p.couleur || "").toLowerCase();
+  return c === "#f0417a" || c === "#f0427b" ? "var(--cognac)" : (p && p.couleur) || "var(--cognac)";
+}
 
 /* --- modale (feuille qui monte du bas) --- */
 function openModal(html) {

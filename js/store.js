@@ -61,20 +61,29 @@ const EXOS = {
   "Push (pecs · épaules · triceps)": [
     "Développé couché", "Développé incliné", "Écartés (pec fly)", "Dips", "Pompes",
     "Développé pecs (machine)", "Développé épaules (machine)",
-    "Développé militaire", "Élévations latérales", "Élévations frontales",
-    "Extension triceps poulie", "Barre au front"
+    "Développé militaire", "Développé militaire prise neutre", "Développé militaire unilatéral prise neutre",
+    "Élévations latérales", "Élévations frontales",
+    "Chest press", "Chest press prise neutre", "Poulie basse pecs", "Dips (machine)",
+    "Extension triceps poulie", "Extension triceps poulie au-dessus de la tête", "Barre au front"
   ],
   "Pull (dos · biceps)": [
-    "Tirage vertical", "Tirage horizontal", "Rowing barre", "Rowing haltère",
-    "Soulevé de terre", "Pull-over", "Oiseau (arrière d'épaule)",
-    "Extension lombaires (banc)", "Curl biceps", "Curl marteau"
+    "Tirage vertical", "Tirage vertical prise serrée",
+    "Tirage horizontal", "Tirage horizontal prise serrée (machine)",
+    "Tirage horizontal prise large", "Tirage horizontal prise large (machine)",
+    "Rowing barre", "Rowing haltère", "Soulevé de terre", "Pull-over", "Face pull", "Oiseau (arrière d'épaule)",
+    "Extension lombaires (banc)", "Curl biceps", "Curl biceps bras en arrière", "Curl marteau",
+    "Curl pupitre", "Zottman curl"
   ],
   "Legs / Lower (jambes · fessiers)": [
-    "Squat", "Presse à cuisses", "Fentes", "Fentes bulgares", "Leg extension", "Leg curl",
-    "Hip thrust", "Soulevé de terre roumain", "Soulevé de terre jambes tendues",
+    "Squat", "Presse à cuisses", "Fentes", "Fentes bulgares", "Leg extension",
+    "Leg curl", "Leg curl allongé", "Hip thrust", "Hip extension", "Soulevé de terre roumain", "Soulevé de terre jambes tendues",
     "Abducteurs (machine)", "Adducteurs (machine)", "Kickback fessiers (poulie)", "Mollets debout"
   ],
-  "Abdos": ["Crunch", "Gainage", "Relevés de jambes"],
+  "Abdos": [
+    "Crunch", "Crunch à la poulie", "Crunch lesté (banc à abdos)", "Bicycle crunch",
+    "Gainage", "Planche latérale", "Relevés de jambes", "V-up partiel lesté",
+    "Dead bug", "Dead bug lesté", "Boat twists"
+  ],
   "Cardio": ["Tapis de course", "Vélo", "Rameur", "Elliptique", "Escalier"]
 };
 
@@ -86,17 +95,55 @@ const EXOS_ISO = [
   "Écartés (pec fly)", "Élévations latérales", "Élévations frontales", "Oiseau (arrière d'épaule)",
   "Pull-over", "Extension lombaires (banc)",
   "Curl biceps", "Curl marteau", "Extension triceps poulie", "Barre au front",
-  "Crunch", "Gainage", "Relevés de jambes"
+  "Crunch", "Gainage", "Relevés de jambes",
+  // ajoutés depuis les exercices perso de Célia et Jérémy
+  "Extension triceps poulie au-dessus de la tête", "Poulie basse pecs", "Face pull",
+  "Curl biceps bras en arrière", "Curl pupitre", "Zottman curl",
+  "Leg curl allongé", "Hip extension",
+  "Crunch à la poulie", "Crunch lesté (banc à abdos)", "Bicycle crunch", "Planche latérale",
+  "V-up partiel lesté", "Dead bug", "Dead bug lesté", "Boat twists"
 ];
+
+/* Anciens noms d'exercices perso → nom de la bibliothèque. Appliqué à chaque chargement
+   (et après une restauration) : séances, programmes et mode de charge suivent le renommage,
+   donc les stats et records sont conservés. */
+const EXO_ALIASES = {
+  "Machine Dips": "Dips (machine)",
+  "Extension triceps poulie au dessus de la tête": "Extension triceps poulie au-dessus de la tête",
+  "Triceps extension poulie au dessus de la tête": "Extension triceps poulie au-dessus de la tête",
+  "Dev militaire prise neutre": "Développé militaire prise neutre",
+  "Dev militaire uni prise neutre": "Développé militaire unilatéral prise neutre",
+  "Tirage Verticale Prise serrée": "Tirage vertical prise serrée",
+  "Tirage horizontale prise serré machine": "Tirage horizontal prise serrée (machine)",
+  "Tirage Horizontal Machine": "Tirage horizontal",
+  "Tirage Horizontal prise large": "Tirage horizontal prise large",
+  "Tirage horizontal machine prise large": "Tirage horizontal prise large (machine)",
+  "Curl Biceps Bras en arrière": "Curl biceps bras en arrière",
+  "Curl Biceps bras en arrière": "Curl biceps bras en arrière",
+  "Zottman Curl": "Zottman curl",
+  "Leg Curl allongé": "Leg curl allongé",
+  "Planche latérales": "Planche latérale",
+  "Crunch poulie": "Crunch à la poulie",
+  "crunch lesté sur banc à abdominaux": "Crunch lesté (banc à abdos)",
+  "Bicycle Crunch": "Bicycle crunch",
+  "Dead Bug lesté": "Dead bug lesté",
+  "Boat Twists": "Boat twists",
+  // doublons fusionnés : les historiques sont réunis sous un seul nom
+  "Leg curl couché": "Leg curl allongé",
+  "Tirage horizontal (machine)": "Tirage horizontal",
+  "Bed bug": "Dead bug"
+};
 function exoIsIso(nom) { return EXOS_ISO.includes(nom); }
 
 /* ---- mode de charge par exercice : libre / machine / corps (reps) / temps (secondes) ---- */
 const EXO_MODES = [["libre", "Libre"], ["machine", "Machine"], ["corps", "Poids du corps"], ["temps", "Temps"]];
 
 function exoDefaultMode(nom) {
-  if (nom === "Gainage") return "temps";
-  if (["Pompes", "Crunch", "Relevés de jambes", "Dips", "Extension lombaires (banc)"].includes(nom)) return "corps";
-  const machine = ["(machine)", "poulie", "Presse à cuisses", "Leg extension", "Leg curl", "Tirage vertical", "Tirage horizontal"];
+  if (nom === "Gainage" || nom === "Planche latérale") return "temps";
+  if (["Pompes", "Crunch", "Relevés de jambes", "Dips", "Extension lombaires (banc)",
+       "Bicycle crunch", "Dead bug", "Boat twists"].includes(nom)) return "corps";
+  const machine = ["(machine)", "poulie", "Presse à cuisses", "Leg extension", "Leg curl", "Tirage vertical", "Tirage horizontal",
+                   "Chest press", "Face pull"];
   if (machine.some(h => nom.includes(h))) return "machine";
   return "libre";
 }
@@ -166,6 +213,27 @@ const Store = {
       this.data[k] = Object.assign({}, def2[k], this.data[k] || {});
     }
     this.current = localStorage.getItem(this.PROFILE_KEY) || null;
+    this.migrateExos();
+  },
+
+  /* range les exercices perso devenus des exercices de la bibliothèque :
+     renomme les anciennes graphies (historique compris) puis les retire de « Mes exercices » */
+  migrateExos() {
+    const biblio = new Set(Object.values(EXOS).flat());
+    let change = false;
+    for (const profil of Object.keys(this.data.profils)) {
+      const perso = this.data.exosPerso[profil] || (this.data.exosPerso[profil] = []);
+      const utilises = new Set(perso);
+      this.data.seances.forEach(s => { if (s.profil === profil) (s.exercices || []).forEach(e => utilises.add(e.nom)); });
+      Object.values(this.data.programme[profil] || {}).forEach(l => l.forEach(n => utilises.add(n)));
+      Object.keys(this.data.exoMeta[profil] || {}).forEach(n => utilises.add(n));
+      for (const [ancien, nouveau] of Object.entries(EXO_ALIASES)) {
+        if (utilises.has(ancien)) { this.renameExo(ancien, nouveau, profil, true); change = true; }
+      }
+      const reste = perso.filter(n => !biblio.has(n));
+      if (reste.length !== perso.length) { this.data.exosPerso[profil] = reste; change = true; }
+    }
+    if (change) this.save();
   },
 
   save() {
@@ -202,7 +270,7 @@ const Store = {
 
   /* renomme un exercice partout : bibliothèque perso, séances passées,
      programmes du planning et mode de charge mémorisé */
-  renameExo(ancien, nouveau, profil) {
+  renameExo(ancien, nouveau, profil, sansSauver) {
     profil = profil || this.current;
     const perso = this.data.exosPerso[profil];
     const idx = perso.indexOf(ancien);
@@ -230,6 +298,6 @@ const Store = {
       if (!meta[nouveau]) meta[nouveau] = meta[ancien];
       delete meta[ancien];
     }
-    this.save();
+    if (!sansSauver) this.save();
   }
 };

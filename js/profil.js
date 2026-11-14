@@ -54,7 +54,7 @@ const Profil = {
   render() {
     $("#profil-switch").innerHTML = Object.entries(Store.data.profils).map(([id, p]) =>
       `<button class="pswitch${id === Store.current ? " active" : ""}" data-id="${id}"
-        style="${id === Store.current ? "border-color:" + p.couleur + ";color:" + p.couleur : ""}">${esc(p.nom)}</button>`
+        style="${id === Store.current ? "border-color:" + accentOf(p) + ";color:" + accentOf(p) : ""}">${esc(p.nom)}</button>`
     ).join("");
     $$("#profil-switch .pswitch").forEach(b => b.onclick = () => {
       Store.setProfile(b.dataset.id);
