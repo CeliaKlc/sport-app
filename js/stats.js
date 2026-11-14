@@ -1,18 +1,65 @@
-/* ===== Page Stats : résumé hebdo, graphiques, progression des charges, historique ===== */
+/* ===== Page Stats : trois onglets — Aperçu (la semaine), Progrès (un exercice à la fois), Journal (historique) ===== */
+
+/* groupe d'un exercice d'après la bibliothèque (Push, Pull, Legs, Abdos, Cardio) */
+const STATS_GROUPES = { "Push": "Push", "Pull": "Pull", "Legs / Lower": "Legs", "Abdos": "Abdos", "Cardio": "Cardio" };
+function exoGroupe(nom) {
+  for (const [cat, liste] of Object.entries(EXOS)) {
+    if (liste.includes(nom)) return STATS_GROUPES[cat.split(" (")[0]] || cat;
+  }
+  return "Autres";
+}
+const GROUPE_ORDRE = ["Push", "Pull", "Legs", "Abdos", "Cardio", "Autres"];
+
+/* meilleure valeur d'un exercice dans une séance : charge (kg) > durée (s) > répétitions */
+function exoPerf(e) {
+  const kg = Math.max(0, ...e.series.map(x => x.charge || 0));
+  if (kg > 0) return { unit: "kg", value: kg };
+  const sec = Math.max(0, ...e.series.map(x => x.sec || 0));
+  if (sec > 0) return { unit: "s", value: sec };
+  const reps = Math.max(0, ...e.series.map(x => x.reps || 0));
+  if (reps > 0) return { unit: "reps", value: reps };
+  return null;
+}
+function fmtPerf(v, unit) { return unit === "reps" ? `× ${v}` : `${v} ${unit}`; }
+function fmtSerie(x) {
+  if (x.sec) return x.sec + " s";
+  return [x.charge ? x.charge + " kg" : "", x.reps ? "× " + x.reps : ""].join(" ").trim() || "—";
+}
 
 const Stats = {
+  tab: "apercu",
   selectedExo: null,
+  showAllRecords: false,
+  journalLimit: 40,
+
+  init() {
+    $$("#stats-tabs [data-tab]").forEach(b => b.onclick = () => {
+      this.tab = b.dataset.tab;
+      this.applyTab();
+      window.scrollTo(0, 0);
+    });
+    this.applyTab();
+  },
+
+  applyTab() {
+    $$("#stats-tabs [data-tab]").forEach(b => b.classList.toggle("on", b.dataset.tab === this.tab));
+    $$("#view-stats [data-pane]").forEach(p => p.classList.toggle("hidden", p.dataset.pane !== this.tab));
+  },
 
   render() {
     const seances = Store.seances().slice().sort((a, b) => b.debut - a.debut);
     this.renderBackupBanner();
+    // Aperçu
     this.renderStreak();
     this.renderWeekCards(seances);
     this.renderWeeksChart(seances);
-    this.renderMuscles(seances);
-    this.renderExoProgress(seances);
-    this.renderRecords(seances);
-    this.renderHistory(seances);
+    this.renderBalance(seances);
+    // Progrès
+    const perfs = this.collectPerfs(seances);
+    this.renderExoProgress(perfs);
+    this.renderRecords(perfs);
+    // Journal
+    this.renderJournal(seances);
   },
 
   /* ---- série d'assiduité (streak) ----
@@ -46,28 +93,7 @@ const Stats = {
     if (!streak) return;
     el.innerHTML = `<span class="flame">🔥</span><div>
       <strong>${streak} semaine${streak > 1 ? "s" : ""} d'assiduité</strong><br>
-      <small>Toutes tes séances prévues sont faites — les jours de repos préservent la flamme 😌</small></div>`;
-  },
-
-  renderRecords(seances) {
-    const best = {};
-    seances.forEach(s => (s.exercices || []).forEach(e => e.series.forEach(x => {
-      const b = best[e.nom] = best[e.nom] || { charge: 0, reps: 0, sec: 0, dc: s.date, ds: s.date, dr: s.date };
-      if ((x.charge || 0) > b.charge) { b.charge = x.charge; b.dc = s.date; }
-      if ((x.sec || 0) > b.sec) { b.sec = x.sec; b.ds = s.date; }
-      if (!(x.charge > 0) && (x.reps || 0) > b.reps) { b.reps = x.reps; b.dr = s.date; }
-    })));
-    // priorité d'affichage : charge (kg) > durée (s) > répétitions
-    const rows = Object.entries(best)
-      .filter(([, r]) => r.charge > 0 || r.sec > 0 || r.reps > 0)
-      .sort((a, b) => (b[1].charge - a[1].charge) || (b[1].sec - a[1].sec) || (b[1].reps - a[1].reps));
-    $("#stats-records").innerHTML = rows.length
-      ? rows.map(([nom, r]) => {
-          const val = r.charge ? [r.charge + " kg", r.dc] : r.sec ? [r.sec + " s", r.ds] : ["× " + r.reps + " reps", r.dr];
-          return `<div class="record-row"><span>${esc(nom)}</span>
-            <strong>${val[0]}</strong><small>${esc(fmtDateFR(val[1]))}</small></div>`;
-        }).join("")
-      : `<div class="chart-empty">Tes records apparaîtront ici dès que tu noteras tes charges 🏆</div>`;
+      <small>Les jours de repos préservent la flamme 😌</small></div>`;
   },
 
   renderBackupBanner() {
@@ -84,18 +110,34 @@ const Stats = {
     banner.querySelector("button").onclick = () => UI.show("profil");
   },
 
+  /* ================= APERÇU ================= */
+
+  /* cette semaine, comparée à la semaine dernière au même jour (comparaison équitable en milieu de semaine) */
   renderWeekCards(seances) {
-    const lundi = dateToISO(mondayOf(new Date()));
-    const dimanche = dateToISO(addDays(mondayOf(new Date()), 6));
-    const week = seances.filter(s => s.date >= lundi && s.date <= dimanche);
-    const actif = week.reduce((a, s) => a + s.tempsActif, 0);
-    const pause = week.reduce((a, s) => a + s.tempsPause, 0);
-    const cal = week.reduce((a, s) => a + (s.calories || 0), 0);
-    $("#stats-week-cards").innerHTML = `
-      <div class="stat-card"><div class="val">${week.length}</div><div class="lbl">Séance${week.length > 1 ? "s" : ""}</div></div>
-      <div class="stat-card"><div class="val">${actif ? fmtDuree(actif) : "0 min"}</div><div class="lbl">Temps actif</div></div>
-      <div class="stat-card"><div class="val">${pause ? fmtDuree(pause) : "0 min"}</div><div class="lbl">Temps de pause</div></div>
-      <div class="stat-card"><div class="val">${cal} kcal</div><div class="lbl">Calories (est.)</div></div>`;
+    const lundi = mondayOf(new Date());
+    const sum = (debut, fin) => {
+      const a = dateToISO(debut), b = dateToISO(fin);
+      const l = seances.filter(s => s.date >= a && s.date <= b);
+      return {
+        n: l.length,
+        actif: l.reduce((t, s) => t + (s.tempsActif || 0), 0),
+        series: l.reduce((t, s) => t + (s.nbSeries || 0), 0),
+        cal: l.reduce((t, s) => t + (s.calories || 0), 0)
+      };
+    };
+    const now = sum(lundi, addDays(lundi, 6));
+    const avant = sum(addDays(lundi, -7), addDays(new Date(), -7));
+    const delta = (d, fmt) => {
+      if (!d) return `<div class="delta">= sem. dernière</div>`;
+      return `<div class="delta ${d > 0 ? "up" : "down"}">${d > 0 ? "↑ +" : "↓ −"}${fmt(Math.abs(d))} vs sem. dern.</div>`;
+    };
+    const tile = (val, lbl, d, fmt) =>
+      `<div class="stat-card"><div class="lbl">${lbl}</div><div class="val">${val}</div>${delta(d, fmt)}</div>`;
+    $("#stats-week-cards").innerHTML =
+      tile(now.n, "Séance" + (now.n > 1 ? "s" : ""), now.n - avant.n, v => v) +
+      tile(now.actif ? fmtDuree(now.actif) : "0 min", "Temps actif", Math.round((now.actif - avant.actif) / 60) * 60, v => fmtDuree(v)) +
+      tile(now.series, "Séries", now.series - avant.series, v => v) +
+      tile(now.cal + " kcal", "Calories (est.)", now.cal - avant.cal, v => v + " kcal");
   },
 
   renderWeeksChart(seances) {
@@ -108,111 +150,228 @@ const Stats = {
         .reduce((sum, s) => sum + s.tempsActif, 0);
       items.push({ label: start.getDate() + "/" + (start.getMonth() + 1), value: Math.round(actif / 60) });
     }
-    $("#stats-weeks-chart").innerHTML = svgBars(items, { fmt: v => v + "'" });
+    const vals = items.slice(0, -1).map(i => i.value).filter(v => v > 0);
+    const moy = vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
+    $("#stats-weeks-chart").innerHTML = svgBars(items, { fmt: v => v + "'" }) +
+      (moy ? `<p class="chart-note">Moyenne par semaine d'entraînement : <strong>${fmtDuree(moy * 60)}</strong></p>` : "");
   },
 
-  renderMuscles(seances) {
+  /* équilibre musculaire : séries par groupe sur 30 jours (d'après les exercices notés) */
+  renderBalance(seances) {
     const limite = dateToISO(addDays(new Date(), -30));
-    const recentes = seances.filter(s => s.date >= limite && s.muscle);
-    if (!recentes.length) {
-      $("#stats-muscles").innerHTML = `<div class="chart-empty">Aucune séance sur les 30 derniers jours.</div>`;
+    const counts = {};
+    seances.filter(s => s.date >= limite).forEach(s => (s.exercices || []).forEach(e => {
+      const g = exoGroupe(e.nom);
+      counts[g] = (counts[g] || 0) + e.series.length;
+    }));
+    const groupes = GROUPE_ORDRE.filter(g => counts[g]);
+    if (!groupes.length) {
+      $("#stats-muscles").innerHTML = `<div class="chart-empty">Note tes séries dans le carnet du chrono
+        pour voir quels muscles tu travailles le plus.</div>`;
       return;
     }
-    const counts = {};
-    recentes.forEach(s => counts[s.muscle] = (counts[s.muscle] || 0) + 1);
     const max = Math.max(...Object.values(counts));
-    $("#stats-muscles").innerHTML = Object.entries(counts)
-      .sort((a, b) => b[1] - a[1])
-      .map(([m, n]) => `
+    // petit conseil : un grand groupe (Push / Pull / Legs) nettement en retrait
+    const faible = ["Push", "Pull", "Legs"].filter(g => (counts[g] || 0) < max * 0.4);
+    $("#stats-muscles").innerHTML = groupes.map(g => `
         <div class="muscle-row">
-          <span class="name">${esc(m)}</span>
-          <span class="bar"><i style="width:${n / max * 100}%;background:${tagColor(m)}"></i></span>
-          <span class="n">${n}×</span>
-        </div>`).join("");
+          <span class="name">${esc(g)}</span>
+          <span class="bar"><i style="width:${counts[g] / max * 100}%;background:${tagColor(g)}"></i></span>
+          <span class="n">${counts[g]}</span>
+        </div>`).join("") +
+      `<p class="chart-note">Nombre de séries sur les 30 derniers jours.` +
+      (faible.length ? ` Un peu en retrait : <strong>${faible.join(", ")}</strong>.` : "") + `</p>`;
   },
 
-  renderExoProgress(seances) {
-    // charge (ou durée) max par exercice et par séance, en ordre chronologique
+  /* ================= PROGRÈS ================= */
+
+  /* meilleure perf par exercice et par séance, en ordre chronologique */
+  collectPerfs(seances) {
     const byExo = {};
-    seances.slice().reverse().forEach(s => {
-      (s.exercices || []).forEach(e => {
-        const maxCharge = Math.max(...e.series.map(x => x.charge || 0), 0);
-        const maxSec = Math.max(...e.series.map(x => x.sec || 0), 0);
-        if (maxCharge > 0) {
-          const b = byExo[e.nom] = byExo[e.nom] || { unit: "kg", points: [] };
-          if (b.unit === "kg") b.points.push({ label: fmtDateFR(s.date), value: maxCharge });
-        } else if (maxSec > 0) {
-          const b = byExo[e.nom] = byExo[e.nom] || { unit: "s", points: [] };
-          if (b.unit === "s") b.points.push({ label: fmtDateFR(s.date), value: maxSec });
-        }
-      });
-    });
-    const exos = Object.keys(byExo).sort((a, b) => a.localeCompare(b, "fr"));
+    seances.slice().reverse().forEach(s => (s.exercices || []).forEach(e => {
+      const p = exoPerf(e);
+      if (!p) return;
+      const b = byExo[e.nom] = byExo[e.nom] || { unit: p.unit, points: [] };
+      if (b.unit === p.unit) b.points.push({ date: s.date, value: p.value });
+    }));
+    return byExo;
+  },
+
+  renderExoProgress(byExo) {
+    const exos = Object.keys(byExo);
     const sel = $("#stats-exo-select");
     if (!exos.length) {
       sel.innerHTML = `<option>Aucun exercice noté pour l'instant</option>`;
       sel.disabled = true;
       $("#stats-exo-chart").innerHTML = `<div class="chart-empty">Note tes charges dans le carnet pendant tes pauses,
         et tu verras ici ta progression exercice par exercice 📈</div>`;
+      $("#stats-exo-summary").innerHTML = "";
       return;
     }
     sel.disabled = false;
-    if (!this.selectedExo || !byExo[this.selectedExo]) this.selectedExo = exos[0];
-    sel.innerHTML = exos.map(e => `<option value="${esc(e)}"${e === this.selectedExo ? " selected" : ""}>${esc(e)}</option>`).join("");
-    sel.onchange = () => { this.selectedExo = sel.value; this.renderExoProgress(seances); };
+    // par défaut : le dernier exercice travaillé
+    if (!this.selectedExo || !byExo[this.selectedExo]) {
+      this.selectedExo = exos.reduce((a, b) =>
+        byExo[b].points[byExo[b].points.length - 1].date > byExo[a].points[byExo[a].points.length - 1].date ? b : a);
+    }
+    // sélecteur rangé par groupe musculaire
+    const parGroupe = {};
+    exos.forEach(e => (parGroupe[exoGroupe(e)] = parGroupe[exoGroupe(e)] || []).push(e));
+    sel.innerHTML = GROUPE_ORDRE.filter(g => parGroupe[g]).map(g =>
+      `<optgroup label="${esc(g)}">` +
+      parGroupe[g].sort((a, b) => a.localeCompare(b, "fr")).map(e =>
+        `<option value="${esc(e)}"${e === this.selectedExo ? " selected" : ""}>${esc(e)}</option>`).join("") +
+      `</optgroup>`).join("");
+    sel.onchange = () => { this.selectedExo = sel.value; this.renderExoProgress(byExo); };
 
-    const exoData = byExo[this.selectedExo];
-    const points = exoData.points.slice(-10); // les 10 dernières séances
-    const pr = Math.max(...exoData.points.map(p => p.value));
+    const d = byExo[this.selectedExo];
+    const pts = d.points;
+    const record = Math.max(...pts.map(p => p.value));
+    const dernier = pts[pts.length - 1];
+    const premier = pts[0];
+    const evol = +(dernier.value - premier.value).toFixed(1);
+    const u = d.unit === "reps" ? " reps" : " " + d.unit;
+    $("#stats-exo-summary").innerHTML = `
+      <div><span class="lbl">Record</span><strong>${record}${u}</strong></div>
+      <div><span class="lbl">Dernière fois</span><strong>${dernier.value}${u}</strong><small>${esc(fmtDateFR(dernier.date))}</small></div>
+      <div><span class="lbl">Depuis le début</span><strong class="${evol > 0 ? "up" : ""}">${evol > 0 ? "+" : ""}${evol}${u}</strong>
+        <small>${pts.length} séance${pts.length > 1 ? "s" : ""}</small></div>`;
     $("#stats-exo-chart").innerHTML =
-      svgLine(points, { unit: "" }) +
-      `<div class="pr-line">🏆 Record personnel : <strong>${pr} ${exoData.unit}</strong></div>`;
+      svgLine(pts.slice(-10).map(p => ({ label: p.date.slice(8).replace(/^0/, "") + "/" + p.date.slice(5, 7).replace(/^0/, ""), value: p.value })), { unit: "" });
   },
 
-  renderHistory(seances) {
+  /* derniers records battus (on ne compte pas la toute première fois) + liste complète repliable */
+  renderRecords(byExo) {
+    const events = [];
+    for (const [nom, d] of Object.entries(byExo)) {
+      let best = 0;
+      d.points.forEach(p => {
+        if (best > 0 && p.value > best) events.push({ nom, unit: d.unit, value: p.value, gain: +(p.value - best).toFixed(1), date: p.date });
+        best = Math.max(best, p.value);
+      });
+    }
+    events.sort((a, b) => b.date.localeCompare(a.date));
+    const recents = events.slice(0, 5);
+
+    let html = recents.length
+      ? recents.map(r => `
+        <button class="record-row" data-exo="${esc(r.nom)}">
+          <span>${esc(r.nom)}</span>
+          <strong>${fmtPerf(r.value, r.unit)}</strong>
+          <em>+${r.gain}</em>
+          <small>${esc(fmtDateFR(r.date))}</small>
+        </button>`).join("")
+      : `<div class="chart-empty">Tes prochains records battus apparaîtront ici 🏆</div>`;
+
+    const exos = Object.keys(byExo);
+    if (exos.length) {
+      html += `<button class="btn btn-outline btn-small records-toggle" id="records-toggle">
+        ${this.showAllRecords ? "Masquer" : "Voir"} tous mes records (${exos.length})</button>`;
+      if (this.showAllRecords) {
+        const parGroupe = {};
+        exos.forEach(e => (parGroupe[exoGroupe(e)] = parGroupe[exoGroupe(e)] || []).push(e));
+        html += GROUPE_ORDRE.filter(g => parGroupe[g]).map(g =>
+          `<div class="records-group">${esc(g)}</div>` +
+          parGroupe[g].sort((a, b) => a.localeCompare(b, "fr")).map(nom => {
+            const d = byExo[nom];
+            const top = d.points.reduce((a, b) => (b.value > a.value ? b : a));
+            return `<button class="record-row" data-exo="${esc(nom)}"><span>${esc(nom)}</span>
+              <strong>${fmtPerf(top.value, d.unit)}</strong><small>${esc(fmtDateFR(top.date))}</small></button>`;
+          }).join("")).join("");
+      }
+    }
+    $("#stats-records").innerHTML = html;
+
+    const t = $("#records-toggle");
+    if (t) t.onclick = () => { this.showAllRecords = !this.showAllRecords; this.renderRecords(byExo); };
+    // toucher un record affiche sa courbe
+    $$("#stats-records [data-exo]").forEach(b => b.onclick = () => {
+      this.selectedExo = b.dataset.exo;
+      this.renderExoProgress(byExo);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  },
+
+  /* ================= JOURNAL ================= */
+
+  renderJournal(seances) {
+    const el = $("#stats-history");
     if (!seances.length) {
-      $("#stats-history").innerHTML = `<div class="card chart-empty">Ta première séance apparaîtra ici.
+      el.innerHTML = `<div class="card chart-empty">Ta première séance apparaîtra ici.
         Direction l'onglet Chrono ! ⏱</div>`;
       return;
     }
-    $("#stats-history").innerHTML = seances.slice(0, 30).map(s => {
-      const detail = (s.exercices || []).map(e =>
-        `<div>• ${esc(e.nom)} : ${e.series.map(x =>
-          x.sec ? x.sec + " s" : [x.charge ? x.charge + " kg" : "—", x.reps ? "× " + x.reps : ""].join(" ").trim()
-        ).join(" · ")}</div>`).join("");
-      return `
-      <div class="hist-item" data-id="${s.id}">
-        <div class="hist-top">
-          <span class="hist-date">${fmtDateFull(s.date)}</span>
-          <span class="tag" style="background:${s.muscle ? tagColor(s.muscle) : "#64748b"}">${esc(s.muscle || "?")}</span>
-        </div>
-        <div class="hist-meta">
-          <span>⏱ ${fmtDuree(s.tempsActif)} actif / ${fmtDuree(s.dureeTotale)}</span>
-          ${s.tempsEchauffement ? `<span>🔥 ${fmtDuree(s.tempsEchauffement)} échauff.</span>` : ""}
-          <span>🔁 ${s.nbSeries} série${s.nbSeries > 1 ? "s" : ""}</span>
-          <span>⚡ ${s.calories || 0} kcal</span>
-        </div>
-        ${detail ? `<div class="hist-detail hidden">${detail}</div>` : ""}
-        <div class="hist-actions">
-          ${detail ? `<button class="btn btn-outline btn-small" data-toggle>Détails</button>` : ""}
-          ${detail ? `<button class="btn btn-outline btn-small" data-edit>✏️ Modifier</button>` : ""}
-          <button class="btn btn-outline btn-small" data-delete>🗑</button>
-        </div>
-      </div>`;
-    }).join("");
-
-    $$("#stats-history [data-toggle]").forEach(b => b.onclick = () => {
-      b.closest(".hist-item").querySelector(".hist-detail").classList.toggle("hidden");
+    const visibles = seances.slice(0, this.journalLimit);
+    const mois = [];
+    visibles.forEach(s => {
+      const cle = s.date.slice(0, 7);
+      let m = mois[mois.length - 1];
+      if (!m || m.cle !== cle) mois.push(m = { cle, items: [] });
+      m.items.push(s);
     });
-    $$("#stats-history [data-delete]").forEach(b => b.onclick = () => {
+    const JC = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+    el.innerHTML = mois.map(m => {
+      const [y, mo] = m.cle.split("-").map(Number);
+      // totaux du mois complet (pas seulement des séances affichées)
+      const tout = seances.filter(s => s.date.startsWith(m.cle));
+      const actif = tout.reduce((t, s) => t + (s.tempsActif || 0), 0);
+      return `
+      <div class="month-head">
+        <span>${MOIS[mo - 1]} ${y !== new Date().getFullYear() ? y : ""}</span>
+        <small>${tout.length} séance${tout.length > 1 ? "s" : ""} · ${fmtDuree(actif)}</small>
+      </div>
+      <div class="journal-list">${m.items.map(s => {
+        const d = isoToDate(s.date);
+        return `
+        <button class="journal-row" data-id="${s.id}">
+          <span class="j-date"><small>${JC[(d.getDay() + 6) % 7]}</small>${d.getDate()}</span>
+          <span class="j-main">
+            <span class="tag" style="background:${s.muscle ? tagColor(s.muscle) : "#8a7b6b"}">${esc(s.muscle || "Séance")}</span>
+            <small>${fmtDuree(s.tempsActif)} actif · ${s.nbSeries} série${s.nbSeries > 1 ? "s" : ""}</small>
+          </span>
+          <span class="j-chev">›</span>
+        </button>`;
+      }).join("")}</div>`;
+    }).join("") +
+      (seances.length > this.journalLimit
+        ? `<button class="btn btn-outline btn-big" id="journal-more">Voir les séances plus anciennes</button>` : "");
+
+    $$("#stats-history [data-id]").forEach(b => b.onclick = () => this.openSeance(b.dataset.id));
+    const more = $("#journal-more");
+    if (more) more.onclick = () => { this.journalLimit += 40; this.renderJournal(seances); };
+  },
+
+  /* fiche d'une séance : détail des séries + modifier / supprimer */
+  openSeance(id) {
+    const s = Store.data.seances.find(x => x.id === id);
+    if (!s) return;
+    const exos = (s.exercices || []).map(e => `
+      <div class="detail-exo">
+        <div class="detail-nom">${esc(e.nom)}</div>
+        <div class="serie-chips">${e.series.map(x => `<span>${esc(fmtSerie(x))}</span>`).join("")}</div>
+      </div>`).join("");
+    const { el, close } = openModal(`
+      <h3>${esc(fmtDateFull(s.date))}</h3>
+      <div class="sheet-meta">
+        <span class="tag" style="background:${s.muscle ? tagColor(s.muscle) : "#8a7b6b"}">${esc(s.muscle || "Séance")}</span>
+        <span>⏱ ${fmtDuree(s.tempsActif)} actif / ${fmtDuree(s.dureeTotale)}</span>
+        ${s.tempsEchauffement ? `<span>🔥 ${fmtDuree(s.tempsEchauffement)} échauff.</span>` : ""}
+        <span>🔁 ${s.nbSeries} série${s.nbSeries > 1 ? "s" : ""}</span>
+        <span>⚡ ${s.calories || 0} kcal</span>
+      </div>
+      ${exos || `<p class="hint">Aucune série notée dans le carnet pour cette séance.</p>`}
+      ${exos ? `<button class="btn btn-outline" data-edit>✏️ Modifier les séries</button>` : ""}
+      <button class="btn btn-outline btn-danger" data-delete>🗑 Supprimer la séance</button>
+    `);
+    const edit = el.querySelector("[data-edit]");
+    if (edit) edit.onclick = () => { close(); this.editSeance(id); };
+    el.querySelector("[data-delete]").onclick = () => {
       if (confirm("Supprimer cette séance ?")) {
-        Store.deleteSeance(b.closest(".hist-item").dataset.id);
+        Store.deleteSeance(id);
+        close();
         this.render();
       }
-    });
-    $$("#stats-history [data-edit]").forEach(b => b.onclick = () => {
-      this.editSeance(b.closest(".hist-item").dataset.id);
-    });
+    };
   },
 
   /* ---- édition d'une séance enregistrée : modifier ou supprimer les séries ---- */

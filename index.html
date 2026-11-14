@@ -57,28 +57,39 @@
 
   <!-- ===== STATS ===== -->
   <section id="view-stats" class="view">
-    <div id="backup-banner" class="banner hidden"></div>
-    <div id="streak-card" class="streak-card hidden"></div>
-    <h2 class="section-title">Cette semaine</h2>
-    <div class="cards-grid" id="stats-week-cards"></div>
-
-    <h2 class="section-title">Temps actif par semaine</h2>
-    <div class="card" id="stats-weeks-chart"></div>
-
-    <h2 class="section-title">Muscles travaillés (30 derniers jours)</h2>
-    <div class="card" id="stats-muscles"></div>
-
-    <h2 class="section-title">Progression des charges</h2>
-    <div class="card">
-      <select id="stats-exo-select" class="input"></select>
-      <div id="stats-exo-chart"></div>
+    <div class="seg" id="stats-tabs">
+      <button data-tab="apercu">Aperçu</button>
+      <button data-tab="progres">Progrès</button>
+      <button data-tab="journal">Journal</button>
     </div>
 
-    <h2 class="section-title">🏆 Mes records</h2>
-    <div class="card" id="stats-records"></div>
+    <!-- Aperçu : la semaine en un coup d'œil -->
+    <div data-pane="apercu">
+      <div id="backup-banner" class="banner hidden"></div>
+      <div id="streak-card" class="streak-card hidden"></div>
+      <h2 class="section-title">Cette semaine</h2>
+      <div class="cards-grid" id="stats-week-cards"></div>
+      <h2 class="section-title">Temps actif par semaine</h2>
+      <div class="card" id="stats-weeks-chart"></div>
+      <h2 class="section-title">Équilibre musculaire · 30 jours</h2>
+      <div class="card" id="stats-muscles"></div>
+    </div>
 
-    <h2 class="section-title">Historique des séances</h2>
-    <div id="stats-history"></div>
+    <!-- Progrès : un exercice à la fois + records -->
+    <div data-pane="progres" class="hidden">
+      <div class="card">
+        <select id="stats-exo-select" class="input"></select>
+        <div class="exo-summary" id="stats-exo-summary"></div>
+        <div id="stats-exo-chart"></div>
+      </div>
+      <h2 class="section-title">🏆 Derniers records battus</h2>
+      <div class="card" id="stats-records"></div>
+    </div>
+
+    <!-- Journal : historique compact, détails au toucher -->
+    <div data-pane="journal" class="hidden">
+      <div id="stats-history"></div>
+    </div>
   </section>
 
   <!-- ===== CHRONO ===== -->

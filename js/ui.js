@@ -155,13 +155,13 @@ function svgLine(points, opts = {}) {
     return `<div class="chart-empty">Pas encore de données pour cet exercice.</div>`;
   }
   const unit = opts.unit || "";
-  const W = Math.max(300, points.length * 56), H = 175;
+  const W = Math.max(300, points.length * 34), H = 175;
   const padX = 26, top = 26, bottom = 140;
   const vals = points.map(p => p.value);
   const min = Math.min(...vals), max = Math.max(...vals);
   const range = (max - min) || 1;
   const x = i => points.length === 1 ? W / 2 : padX + i * ((W - padX * 2) / (points.length - 1));
-  const y = v => bottom - ((v - min) / range) * (bottom - top);
+  const y = v => max === min ? (top + bottom) / 2 : bottom - ((v - min) / range) * (bottom - top); // valeur constante : ligne au milieu
   let path = "", dots = "", labels = "";
   points.forEach((p, i) => {
     const px = x(i), py = y(p.value);

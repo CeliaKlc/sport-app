@@ -28,6 +28,7 @@ window.addEventListener("DOMContentLoaded", () => {
     $("#profile-select").classList.remove("hidden");
   }
 
+  Stats.init();
   Planning.init();
   Profil.init();
   Chrono.init(); // restaure une éventuelle séance en cours

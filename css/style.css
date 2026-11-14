@@ -362,3 +362,50 @@ svg{display:block;width:100%;height:auto}
 /* boutons ronds Son / Écran allumé du chrono : estompés quand désactivés */
 .icon-chip{opacity:.45;filter:grayscale(.6)}
 .icon-chip.on{opacity:1;filter:none;border-color:color-mix(in srgb,var(--accent) 55%,transparent);background:color-mix(in srgb,var(--accent) 14%,var(--card))}
+
+/* ===== Stats : onglets, tuiles avec tendance, progrès, journal ===== */
+.seg{display:flex;gap:4px;padding:4px;background:var(--card);border:1px solid var(--line);border-radius:16px;margin:4px 0 12px}
+.seg button{flex:1;border:none;background:none;color:var(--muted);font-family:var(--f-title);font-weight:600;font-size:14px;padding:9px 0;border-radius:12px}
+.seg button.on{background:var(--accent);color:#fff}
+
+.stat-card .val{margin-top:4px}
+.stat-card .lbl{margin-top:0}
+.stat-card .delta{font-size:11.5px;color:var(--muted);margin-top:4px}
+.stat-card .delta.up{color:var(--second-ink)}
+.chart-note{font-size:12.5px;color:var(--muted);margin-top:10px;line-height:1.5}
+.chart-note strong{color:var(--text)}
+
+.exo-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0 6px}
+.exo-summary>div{background:var(--card2);border-radius:12px;padding:9px 10px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.exo-summary .lbl{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.exo-summary strong{font-family:var(--f-num);font-weight:600;font-size:17px;white-space:nowrap}
+.exo-summary strong.up{color:var(--second-ink)}
+.exo-summary small{font-size:11px;color:var(--muted)}
+
+button.record-row{width:100%;background:none;border:none;border-bottom:1px solid var(--line);color:var(--text);text-align:left;font-family:inherit}
+button.record-row:last-of-type{border-bottom:none}
+.record-row em{font-style:normal;font-size:12px;font-weight:600;color:var(--second-ink)}
+.records-toggle{width:100%;margin-top:10px}
+.records-group{font-family:var(--f-title);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:14px 0 2px}
+
+.month-head{display:flex;justify-content:space-between;align-items:baseline;margin:18px 2px 8px}
+.month-head span{font-family:var(--f-title);font-weight:600;font-size:15px;text-transform:capitalize}
+.month-head small{color:var(--muted);font-size:12px}
+.month-head:first-child{margin-top:4px}
+.journal-list{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.journal-row{width:100%;display:flex;align-items:center;gap:12px;padding:11px 14px;background:none;border:none;border-bottom:1px solid var(--line);color:var(--text);text-align:left;font-family:inherit}
+.journal-row:last-child{border-bottom:none}
+.journal-row:active{background:var(--card2)}
+.j-date{width:34px;flex:none;display:flex;flex-direction:column;align-items:center;font-family:var(--f-num);font-weight:600;font-size:18px;line-height:1.1}
+.j-date small{font-family:var(--f-title);font-size:10px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.j-main{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+.j-main small{color:var(--muted);font-size:12.5px}
+.j-chev{color:var(--muted);font-size:20px}
+#journal-more{margin-top:14px}
+
+.sheet-meta{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:13px;color:var(--muted);margin-bottom:14px}
+.detail-exo{padding:10px 0;border-top:1px solid var(--line)}
+.detail-nom{font-weight:600;font-size:14px;margin-bottom:6px}
+.serie-chips{display:flex;flex-wrap:wrap;gap:6px}
+.serie-chips span{background:var(--card2);border-radius:8px;padding:4px 9px;font-family:var(--f-num);font-size:13px}
+.btn-danger{color:var(--red);border-color:color-mix(in srgb,var(--red) 35%,transparent)}
