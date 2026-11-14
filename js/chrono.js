@@ -210,15 +210,22 @@ const Chrono = {
 
     const panel = $("#ch-panel");
     panel.classList.remove("mode-active", "mode-warmup", "mode-pause-red", "mode-pause-green", "mode-pause-over");
+    // anneau : en pause, avance jusqu'au repos conseillé ; sinon fait un tour par minute
+    const ring = $("#ch-ring");
+    const tour = 333.01; // 2π × 53
+    const setRing = f => ring.setAttribute("stroke-dashoffset", (tour * (1 - Math.min(Math.max(f, 0), 1))).toFixed(2));
     if (this.st.state === "warmup") {
       panel.classList.add("mode-warmup");
+      setRing((t.seg % 60000) / 60000);
       return;
     }
     if (this.st.state === "active") {
       panel.classList.add("mode-active");
+      setRing((t.seg % 60000) / 60000);
       return;
     }
     const seuil = this.pauseSeuilMs();
+    setRing(t.seg / seuil);
     if (t.seg >= seuil * 2) {
       // pause deux fois trop longue : le muscle refroidit
       panel.classList.add("mode-pause-over");

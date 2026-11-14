@@ -58,9 +58,36 @@ const UI = {
     const p = Store.profil();
     if (!p) return;
     document.documentElement.style.setProperty("--accent", p.couleur);
+    // fin du dégradé de l'accent : rose → corail pour Célia, bleu → ciel pour Jérémy
+    const fin = { "#f0417a": "#ff8a5c", "#3aa0ff": "#6fd3ff" }[(p.couleur || "").toLowerCase()];
+    document.documentElement.style.setProperty("--accent-2", fin || p.couleur);
     $("#profile-chip").textContent = p.nom;
+  },
+
+  /* --- thème : « expresso » (sombre, par défaut) ou « clair », mémorisé sur l'appareil --- */
+  THEME_KEY: "sportapp-theme",
+  theme() {
+    return document.documentElement.dataset.theme === "clair" ? "clair" : "expresso";
+  },
+  setTheme(t) {
+    if (t === "clair") document.documentElement.dataset.theme = "clair";
+    else delete document.documentElement.dataset.theme;
+    try { localStorage.setItem(this.THEME_KEY, t); } catch (e) {}
+    this.applyTheme();
+  },
+  applyTheme() {
+    const t = this.theme();
+    const btn = $("#theme-toggle");
+    btn.textContent = t === "clair" ? "☕" : "☀️";
+    btn.setAttribute("aria-label", t === "clair" ? "Passer en thème Expresso" : "Passer en thème clair");
+    $$("[data-theme-choice]").forEach(b => b.classList.toggle("active", b.dataset.themeChoice === t));
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute("content", "#0d0f14");
+    if (meta) meta.setAttribute("content", t === "clair" ? "#f9f5ef" : "#15110d");
+  },
+  initTheme() {
+    $("#theme-toggle").onclick = () => this.setTheme(this.theme() === "clair" ? "expresso" : "clair");
+    $$("[data-theme-choice]").forEach(b => b.onclick = () => this.setTheme(b.dataset.themeChoice));
+    this.applyTheme();
   }
 };
 
@@ -111,8 +138,8 @@ function svgBars(items, opts = {}) {
     const y = base - h;
     const color = it.color || "var(--accent)";
     bars += `<rect x="${x}" y="${y}" width="${bw}" height="${h || 1}" rx="5" fill="${color}" opacity="${it.value ? 1 : .18}"/>`;
-    if (it.value) bars += `<text x="${x + bw / 2}" y="${y - 6}" text-anchor="middle" font-size="10.5" fill="#eef1f6" font-weight="700">${esc(fmt(it.value))}</text>`;
-    bars += `<text x="${x + bw / 2}" y="${base + 16}" text-anchor="middle" font-size="9.5" fill="#8b93a5">${esc(it.label)}</text>`;
+    if (it.value) bars += `<text x="${x + bw / 2}" y="${y - 6}" text-anchor="middle" font-size="10.5" style="fill:var(--text)" font-weight="700">${esc(fmt(it.value))}</text>`;
+    bars += `<text x="${x + bw / 2}" y="${base + 16}" text-anchor="middle" font-size="9.5" style="fill:var(--muted)">${esc(it.label)}</text>`;
   });
   return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img">${bars}</svg>`;
 }
@@ -136,8 +163,8 @@ function svgLine(points, opts = {}) {
     const px = x(i), py = y(p.value);
     path += (i ? " L" : "M") + px.toFixed(1) + " " + py.toFixed(1);
     dots += `<circle cx="${px}" cy="${py}" r="4.5" fill="var(--accent)"/>`;
-    labels += `<text x="${px}" y="${py - 10}" text-anchor="middle" font-size="10.5" fill="#eef1f6" font-weight="700">${esc(p.value + unit)}</text>`;
-    labels += `<text x="${px}" y="${bottom + 20}" text-anchor="middle" font-size="9.5" fill="#8b93a5">${esc(p.label)}</text>`;
+    labels += `<text x="${px}" y="${py - 10}" text-anchor="middle" font-size="10.5" style="fill:var(--text)" font-weight="700">${esc(p.value + unit)}</text>`;
+    labels += `<text x="${px}" y="${bottom + 20}" text-anchor="middle" font-size="9.5" style="fill:var(--muted)">${esc(p.label)}</text>`;
   });
   return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img">
     <path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round"/>

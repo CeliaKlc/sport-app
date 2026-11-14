@@ -9,6 +9,7 @@ function refreshAll() {
 
 window.addEventListener("DOMContentLoaded", () => {
   Store.load();
+  UI.initTheme();
 
   // navigation basse
   $$(".nav-btn").forEach(b => b.onclick = () => UI.show(b.dataset.view));
